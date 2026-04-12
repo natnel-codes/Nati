@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📚 Teacher Hub · Permanent</title>
+  <title>📚 Teacher Hub · Professional</title>
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAd-MV21DJmV1iqNDyc09zV6gTjvFv9SFU",
@@ -22,216 +22,470 @@
     const db = getFirestore(app);
     window.db = db;
     window.firestoreReady = true;
-    window.firestoreModules = { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc };
+    window.firestoreModules = { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch };
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
   <style>
     * { box-sizing: border-box; margin: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: #0f0f12; color: #e0e0e8; margin: 0; padding-bottom: 70px; }
-    body.light { background: #f4f7fb; color: #1e1e2a; }
-    header { background: #4a2e1a; padding: 14px; text-align: center; position: fixed; top: 0; width: 100%; z-index: 10; color: #fae5d2; font-weight: bold; font-size: 1.5rem; }
-    .container { display: none; padding: 78px 12px 20px; min-height: 100vh; }
-    .container.active { display: block; }
-    button { background: #3f2b1c; color: white; border: none; padding: 10px 18px; border-radius: 30px; margin: 4px; cursor: pointer; }
-    input, select { padding: 10px; border-radius: 30px; border: 1px solid #555; background: #1e1e26; color: white; margin: 4px; }
-    body.light input, body.light select { background: white; color: #111; }
+    body {
+      font-family: 'Segoe UI', 'Roboto', sans-serif;
+      background: #0b0c10;
+      color: #f0f0f5;
+      margin: 0;
+      padding-bottom: 80px;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.light {
+      background: #f5f7fc;
+      color: #1e1f2a;
+    }
+    header {
+      background: linear-gradient(145deg, #6b3e1f, #4a2a14);
+      padding: 18px;
+      text-align: center;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 20;
+      color: #ffeedd;
+      font-weight: 800;
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border-bottom: 3px solid #d49c6c;
+    }
+    body.light header {
+      background: linear-gradient(145deg, #8b5e3c, #5e3a1c);
+      color: #ffffff;
+      border-bottom: 3px solid #f3c9a0;
+    }
+    .container {
+      display: none;
+      padding: 100px 20px 30px;
+      min-height: 100vh;
+      width: 100%;
+      max-width: 100%;
+    }
+    .container.active {
+      display: block;
+    }
+    button {
+      background: #c07a3d;
+      color: white;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 40px;
+      margin: 6px 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: all 0.15s;
+      border: 1px solid rgba(255,255,240,0.3);
+    }
+    button:hover {
+      background: #d98e4a;
+      transform: scale(1.02);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    body.light button {
+      background: #a05a2c;
+      color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    input, select {
+      padding: 12px 16px;
+      border-radius: 40px;
+      border: 2px solid #3a3a4a;
+      background: #1e1e28;
+      color: white;
+      margin: 6px 4px;
+      font-weight: 500;
+      font-size: 1rem;
+      width: auto;
+    }
+    body.light input, body.light select {
+      background: white;
+      color: #111;
+      border: 2px solid #b0b0c0;
+    }
     .teacher-only { display: none; }
     body.teacher-mode .teacher-only { display: block; }
     body.teacher-mode .teacher-only-inline { display: inline-block; }
-    nav { position: fixed; bottom: 0; width: 100%; background: #222; display: flex; flex-wrap: wrap; z-index: 10; }
-    nav button { flex: 1 0 60px; background: transparent; color: #f0d5be; border: none; border-radius: 30px; margin: 2px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #1c1c22; border-radius: 16px; overflow: hidden; }
-    th, td { padding: 12px 8px; border-bottom: 1px solid #3a3a48; text-align: left; }
-    th { background: #5a3a22; color: #fff3e6; }
-    .valid { color: #8ff0a4; } .invalid { color: #ff9b9b; }
-    .login-box { max-width: 400px; margin: 40px auto; background: #1c1c22; padding: 30px; border-radius: 24px; text-align: center; }
-    .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-    .setting-card { background: #252530; padding: 20px; border-radius: 16px; }
+    nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #1e1e24;
+      display: flex;
+      flex-wrap: wrap;
+      z-index: 20;
+      box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+      padding: 6px 0;
+      border-top: 2px solid #b56f2e;
+    }
+    body.light nav {
+      background: #e2e6f0;
+      border-top: 2px solid #8b5a2b;
+    }
+    nav button {
+      flex: 1 0 70px;
+      background: transparent;
+      color: #f0d5be;
+      border: none;
+      border-radius: 30px;
+      margin: 2px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      padding: 10px 4px;
+      box-shadow: none;
+    }
+    body.light nav button {
+      color: #3d2b1a;
+    }
+    nav button:hover {
+      background: #3a3a48;
+      color: white;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #1c1c26;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      font-weight: 500;
+    }
+    body.light table {
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 14px 10px;
+      border-bottom: 1px solid #3a3a50;
+      text-align: left;
+    }
+    th {
+      background: #8b5a2b;
+      color: #fff5e6;
+      font-weight: 800;
+    }
+    body.light th {
+      background: #a56e3c;
+    }
+    .valid { color: #7ef0a2; font-weight: bold; }
+    .invalid { color: #ff8a8a; font-weight: bold; }
+    body.light .valid { color: #0f7b3a; }
+    body.light .invalid { color: #c00020; }
+    .login-box {
+      max-width: 450px;
+      margin: 60px auto;
+      background: #1e1e28;
+      padding: 40px 30px;
+      border-radius: 40px;
+      text-align: center;
+      box-shadow: 0 20px 30px rgba(0,0,0,0.5);
+      border: 2px solid #b5702e;
+    }
+    body.light .login-box {
+      background: #ffffff;
+      border: 2px solid #c9a87c;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .setting-card {
+      background: #23232e;
+      padding: 24px 16px;
+      border-radius: 24px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+      border-left: 8px solid #b5702e;
+      font-weight: bold;
+    }
+    body.light .setting-card {
+      background: #f0f4fe;
+      border-left: 8px solid #a86f2c;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #1c1c26;
+      margin: 8px 0;
+      padding: 14px 18px;
+      border-radius: 30px;
+      font-weight: 500;
+      border: 1px solid #5a4a3a;
+    }
+    body.light li {
+      background: #e9ecf5;
+      border: 1px solid #cdb79e;
+    }
+    h2 {
+      font-weight: 800;
+      color: #f5cba0;
+      margin-bottom: 20px;
+      border-left: 8px solid #c07a3d;
+      padding-left: 20px;
+    }
+    body.light h2 {
+      color: #5a3a1e;
+      border-left-color: #a86f2c;
+    }
+    .container { width: 100%; }
   </style>
 </head>
 <body class="dark">
 
-<header>📚 Teacher Hub</header>
-!-- TEACHER LOGIN -->
-<div id="teacher" class="box hidden">
-  <h2>👩‍🏫 Teacher Login</h2>
-  <input id="password" type="password" placeholder="Enter Password">
-  <button onclick="teacherLogin()">Login</button>
-  <button onclick="show('role')" style="background:#555;">⬅ Back</button>
-  <p id="msg"></p>
-</div>
+<header data-i18n="app_title">📚 Teacher Hub</header>
 
-<script>
-function show(page) {
-  document.getElementById('role').classList.add('hidden');
-  document.getElementById('teacher').classList.add('hidden');
-  document.getElementById(page).classList.remove('hidden');
-}
-
-function teacherLogin() {
-  var pass = document.getElementById('password').value;
-
-  if (pass === "teacher123") {
-    alert("✅ Teacher Login Successful");
-  } else {
-    document.getElementById('msg').innerText = "❌ Wrong password";
-  }
-}
-
-function studentLogin() {
-  alert("✅ Student Access Granted");
-}
-</script>
-
-</body>
-</html> -->
+<!-- ========== LOGIN ========== -->
 <div class="container active" id="login">
   <div class="login-box">
-    <h2>🔐 Welcome</h2>
-    <p>👩‍🏫 Teacher: Enter password | 👀 Student: Click below</p>
-    <input id="teacherPassword" type="password" placeholder="Password" value="">
-    <button onclick="loginAsTeacher()" style="width:100%;">👩‍🏫 Enter as Teacher</button>
+    <h2 data-i18n="login_title" style="border:none; padding:0; text-align:center;">🔐 Welcome</h2>
+    <p data-i18n="login_instruction" style="margin:20px 0;">👩‍🏫 Teacher: Enter password | 👀 Student: Click below</p>
+    <input id="teacherPassword" type="password" placeholder="Password" data-i18n-placeholder="password_placeholder" value="">
+    <button onclick="loginAsTeacher()" style="width:100%;" data-i18n="enter_teacher">👩‍🏫 Enter as Teacher</button>
     <p style="margin:20px 0;">or</p>
-    <button onclick="loginAsStudent()" style="width:100%; background:#555;">👀 View as Student</button>
-    <p id="loginMsg" style="margin-top:20px;"></p>
-    <p style="font-size:12px; margin-top:20px;">Teacher password: teacher123</p>
+    <button onclick="loginAsStudent()" style="width:100%; background:#5a5a70;" data-i18n="enter_student">👀 View as Student</button>
+    <p id="loginMsg" style="margin-top:20px; font-weight:bold;"></p>
+    <p style="font-size:13px; margin-top:25px; opacity:0.8;" data-i18n="hint_password">Teacher password: teacher123</p>
   </div>
 </div>
 
-
-<!-- LOGIN – BOTH <!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body {
-  font-family: sans-serif;
-  background: #111;
-  color: white;
-  margin: 0;
-}
-
-.box {
-  max-width: 400px;
-  margin: 80px auto;
-  padding: 25px;
-  background: #222;
-  border-radius: 20px;
-  text-align: center;
-}
-
-button, input {
-  width: 100%;
-  padding: 15px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 30px;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-button {
-  background: #8b5a2b;
-  color: white;
-}
-
-.hidden {
-  display: none;
-}
-</style>
-</head>
-
-<body>
-
-<!-- ROLE SELECT -->
-<div id="role" class="box">
-  <h2>🔐 Choose Login</h2>
-  <button onclick="show('teacher')">👩‍🏫 Teacher Login</button>
-  <button onclick="studentLogin()" style="background:#555;">👀 Student Access</button>
-</div>
-
-<
-<!-- HOME -->
+<!-- ========== HOME ========== -->
 <div class="container" id="home">
-  <h2>📋 Dashboard</h2>
-  <div style="background:#2d4a47; padding:28px; border-radius:28px; color:white; text-align:center;">🎓📊 Class Overview</div>
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0;">
-    <div style="background:#252530; padding:20px; border-radius:16px;">👥 Students: <span id="homeStatStudents">0</span></div>
-    <div style="background:#252530; padding:20px; border-radius:16px;">📈 Avg: <span id="homeStatAvg">0</span></div>
+  <h2 data-i18n="dashboard">📋 Dashboard</h2>
+  <div style="background: linear-gradient(135deg, #2e5a4c, #1e3f36); padding:35px; border-radius:30px; color:white; text-align:center; font-weight:800; font-size:1.6rem; box-shadow:0 8px 16px rgba(0,0,0,0.4);">
+    🎓📊 Class Overview
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin:30px 0;">
+    <div style="background:#2a2a38; padding:30px; border-radius:30px; box-shadow:0 8px 16px rgba(0,0,0,0.3); border-bottom:6px solid #b5702e;">
+      <span style="font-size:1.3rem;">👥 Students:</span> <span id="homeStatStudents" style="font-size:2.5rem; font-weight:900; color:#f5cba0;">0</span>
+    </div>
+    <div style="background:#2a2a38; padding:30px; border-radius:30px; box-shadow:0 8px 16px rgba(0,0,0,0.3); border-bottom:6px solid #b5702e;">
+      <span style="font-size:1.3rem;">📈 Avg Score:</span> <span id="homeStatAvg" style="font-size:2.5rem; font-weight:900; color:#a0e0c0;">0</span>
+    </div>
   </div>
 </div>
 
-<!-- STUDENTS (Table with Edit) -->
+<!-- ========== STUDENTS ========== -->
 <div class="container" id="students">
-  <h2>🧑‍🎓 Students</h2>
-  <div class="teacher-only" style="background:#1c1c22; padding:16px; border-radius:16px; margin-bottom:20px;">
-    <input id="name" placeholder="Name" oninput="validateName()"> <span id="nameMsg"></span>
-    <input id="age" placeholder="Age" oninput="validateNum('age','ageMsg')"> <span id="ageMsg"></span>
+  <h2 data-i18n="students">🧑‍🎓 Students</h2>
+  <div class="teacher-only" style="background:#1e1e28; padding:22px; border-radius:30px; margin-bottom:30px; box-shadow:0 6px 12px rgba(0,0,0,0.4);">
+    <input id="name" placeholder="Name" data-i18n-placeholder="name_placeholder" oninput="validateName()"> <span id="nameMsg"></span>
+    <input id="age" placeholder="Age" data-i18n-placeholder="age_placeholder" oninput="validateNum('age','ageMsg')"> <span id="ageMsg"></span>
     <select id="sex"><option>M</option><option>F</option></select>
-    <input id="grade" placeholder="Grade" oninput="validateNum('grade','gradeMsg')"> <span id="gradeMsg"></span>
-    <input id="s1" placeholder="S1" style="width:80px;" oninput="validateScore('s1','m1')"> <span id="m1"></span>
-    <input id="s2" placeholder="S2" style="width:80px;" oninput="validateScore('s2','m2')"> <span id="m2"></span>
-    <input id="s3" placeholder="S3" style="width:80px;" oninput="validateScore('s3','m3')"> <span id="m3"></span>
-    <button onclick="addOrUpdateStudent()" id="addUpdateBtn">➕ Add Student</button>
-    <button onclick="cancelEdit()" id="cancelEditBtn" style="display:none;">❌ Cancel</button>
+    <input id="grade" placeholder="Grade" data-i18n-placeholder="grade_placeholder" oninput="validateNum('grade','gradeMsg')"> <span id="gradeMsg"></span>
+    <input id="s1" placeholder="S1" style="width:85px;" oninput="validateScore('s1','m1')"> <span id="m1"></span>
+    <input id="s2" placeholder="S2" style="width:85px;" oninput="validateScore('s2','m2')"> <span id="m2"></span>
+    <input id="s3" placeholder="S3" style="width:85px;" oninput="validateScore('s3','m3')"> <span id="m3"></span>
+    <button onclick="addOrUpdateStudent()" id="addUpdateBtn" data-i18n="add_student">➕ Add Student</button>
+    <button onclick="cancelEdit()" id="cancelEditBtn" style="display:none;" data-i18n="cancel">❌ Cancel</button>
   </div>
   <div style="overflow-x:auto;">
     <table id="studentTable">
-      <thead><tr><th>#</th><th>Name</th><th>Age</th><th>Sex</th><th>Grade</th><th>S1</th><th>S2</th><th>S3</th><th>Total</th><th>Avg</th><th class="teacher-only">Actions</th></tr></thead>
+      <thead><tr><th>#</th><th data-i18n="th_name">Name</th><th data-i18n="th_age">Age</th><th data-i18n="th_sex">Sex</th><th data-i18n="th_grade">Grade</th><th>S1</th><th>S2</th><th>S3</th><th data-i18n="th_total">Total</th><th data-i18n="th_avg">Avg</th><th class="teacher-only" data-i18n="th_actions">Actions</th></tr></thead>
       <tbody id="tableBody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- ANALYTICS -->
-<div class="container" id="analytics"><h2>📊 Analytics</h2><p>Total: <span id="total">0</span>  Avg: <span id="avg">0</span></p></div>
+<!-- ========== ANALYTICS ========== -->
+<div class="container" id="analytics">
+  <h2 data-i18n="analytics">📊 Analytics</h2>
+  <div style="background:#1e1e28; padding:30px; border-radius:30px;">
+    <p style="font-size:1.8rem; font-weight:bold;"><span data-i18n="total_score">Total Score</span>: <span id="total">0</span></p>
+    <p style="font-size:1.8rem; font-weight:bold;"><span data-i18n="average_score">Class Average</span>: <span id="avg">0</span></p>
+  </div>
+</div>
 
-<!-- NOTES -->
-<div class="container" id="notes"><h2>📝 Notes</h2><div class="teacher-only"><input id="note" placeholder="Note"><button onclick="addNote()">Add</button></div><ul id="notesList"></ul></div>
+<!-- ========== NOTES ========== -->
+<div class="container" id="notes">
+  <h2 data-i18n="notes">📝 Notes</h2>
+  <div class="teacher-only" style="margin-bottom:30px;">
+    <input id="note" placeholder="Write a note..." data-i18n-placeholder="note_placeholder" style="width:70%;">
+    <button onclick="addNote()" data-i18n="add_note">➕ Add Note</button>
+  </div>
+  <ul id="notesList"></ul>
+</div>
 
-<!-- CALENDAR -->
-<div class="container" id="calendar"><h2>📅 Calendar</h2><div class="teacher-only"><input id="event" placeholder="Event"><input type="date" id="date"><button onclick="addEvent()">Add</button></div><ul id="events"></ul></div>
+<!-- ========== CALENDAR ========== -->
+<div class="container" id="calendar">
+  <h2 data-i18n="calendar">📅 Calendar</h2>
+  <div class="teacher-only" style="margin-bottom:30px;">
+    <input id="event" placeholder="Event name" data-i18n-placeholder="event_placeholder">
+    <input type="date" id="date">
+    <button onclick="addEvent()" data-i18n="add_event">➕ Add Event</button>
+  </div>
+  <ul id="events"></ul>
+</div>
 
-<!-- RESOURCES -->
-<div class="container" id="resources"><h2>🔗 Resources</h2><div class="teacher-only"><input id="res" placeholder="Link"><button onclick="addRes()">Add</button></div><ul id="resList"></ul></div>
+<!-- ========== RESOURCES ========== -->
+<div class="container" id="resources">
+  <h2 data-i18n="resources">🔗 Resources</h2>
+  <div class="teacher-only" style="margin-bottom:30px;">
+    <input id="res" placeholder="Paste link or text" data-i18n-placeholder="resource_placeholder" style="width:70%;">
+    <button onclick="addRes()" data-i18n="add_resource">➕ Add</button>
+  </div>
+  <ul id="resList"></ul>
+</div>
 
-<!-- CHAT -->
-<div class="container" id="chat"><h2>💬 Chat</h2><select id="role"><option>Teacher</option><option>Student</option></select><input id="cname" placeholder="Name"><input id="msg" placeholder="Message"><button onclick="send()">Send</button><ul id="chatBox"></ul></div>
+<!-- ========== CHAT ========== -->
+<div class="container" id="chat">
+  <h2 data-i18n="chat">💬 Chat</h2>
+  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+    <select id="role"><option>Teacher</option><option>Student</option></select>
+    <input id="cname" placeholder="Your name" data-i18n-placeholder="chat_name">
+    <input id="msg" placeholder="Message" data-i18n-placeholder="chat_message" style="flex:2;">
+    <button onclick="send()" data-i18n="send">Send</button>
+  </div>
+  <ul id="chatBox" style="max-height:400px; overflow-y:auto;"></ul>
+</div>
 
-<!-- SETTINGS -->
-<div class="container" id="settings"><h2>⚙️ Settings</h2><div class="settings-grid">
-  <div class="setting-card"><label>Theme</label><button onclick="setTheme('dark')">Dark</button><button onclick="setTheme('light')">Light</button></div>
-  <div class="setting-card"><label>Font</label><button onclick="fontSize(14)">S</button><button onclick="fontSize(18)">M</button><button onclick="fontSize(22)">L</button></div>
-  <div class="setting-card"><label>Auto Save</label><button onclick="toggleAutoSave()" id="autoSaveBtn">Off</button></div>
-  <div class="setting-card"><label>Notify</label><button onclick="notify()">Test</button></div>
-  <div class="setting-card"><label>Clear</label><button onclick="clearAll()">Clear All</button></div>
-  <div class="setting-card"><label>Export</label><button onclick="exportFile()">Export</button></div>
-  <div class="setting-card"><label>Import</label><input type="file" onchange="importFile(event)"></div>
-  <div class="setting-card"><label>Language</label><select id="languageSelect" onchange="changeLanguage(this.value)"><option value="en">English</option><option value="am">አማርኛ</option></select></div>
-  <div class="setting-card"><label>Reset</label><button onclick="resetDefaults()">Defaults</button></div>
-</div></div>
+<!-- ========== SETTINGS ========== -->
+<div class="container" id="settings">
+  <h2 data-i18n="settings">⚙️ Settings</h2>
+  <div class="settings-grid">
+    <div class="setting-card"><label data-i18n="theme">Theme</label><br><button onclick="setTheme('dark')">🌙 Dark</button><button onclick="setTheme('light')">☀️ Light</button></div>
+    <div class="setting-card"><label data-i18n="font_size">Font Size</label><br><button onclick="fontSize(14)">S</button><button onclick="fontSize(18)">M</button><button onclick="fontSize(22)">L</button></div>
+    <div class="setting-card"><label data-i18n="auto_save">Auto Save</label><br><button onclick="toggleAutoSave()" id="autoSaveBtn">Off</button></div>
+    <div class="setting-card"><label data-i18n="notify">Notify</label><br><button onclick="notify()">🔔 Test</button></div>
+    <div class="setting-card"><label data-i18n="clear_data">Clear Data</label><br><button onclick="clearAll()">🧹 Clear All</button></div>
+    <div class="setting-card"><label data-i18n="export">Export Backup</label><br><button onclick="exportFile()">📤 Export</button></div>
+    <div class="setting-card"><label data-i18n="import">Import Backup</label><br><input type="file" id="importFileInput" accept=".json" onchange="importFile(event)"></div>
+    <div class="setting-card"><label data-i18n="language">Language</label><br>
+      <select id="languageSelect" onchange="changeLanguage(this.value)">
+        <option value="en">English</option>
+        <option value="am">አማርኛ</option>
+      </select>
+    </div>
+    <div class="setting-card"><label data-i18n="reset">Reset Defaults</label><br><button onclick="resetDefaults()">⟲ Reset</button></div>
+  </div>
+</div>
 
-<!-- SAVING -->
-<div class="container" id="saving"><h2>💽 Backup</h2><button onclick="saveAllData()">Save Now</button><button onclick="renderAll()">Reload</button></div>
+<!-- ========== SAVING / BACKUP ========== -->
+<div class="container" id="saving">
+  <h2 data-i18n="backup">💽 Backup & Sync</h2>
+  <div style="background:#1e1e28; padding:30px; border-radius:30px;">
+    <p style="font-size:1.2rem; margin-bottom:20px;">Data auto-syncs to cloud. Use export/import for local backup.</p>
+    <button onclick="exportFile()" style="font-size:1.3rem;">📤 Export All Data</button>
+    <button onclick="document.getElementById('importFileInput2').click()" style="font-size:1.3rem;">📥 Import Backup</button>
+    <input type="file" id="importFileInput2" accept=".json" style="display:none;" onchange="importFile(event)">
+    <button onclick="saveAllData()" style="font-size:1.3rem;">💾 Force Save Now</button>
+    <button onclick="renderAll()" style="font-size:1.3rem;">🔄 Reload App</button>
+  </div>
+</div>
 
 <nav>
-  <button onclick="go('home')">🏠 Home</button>
-  <button onclick="go('students')">👥 Students</button>
-  <button onclick="go('analytics')">📊 Stats</button>
-  <button onclick="go('notes')">📝 Notes</button>
-  <button onclick="go('calendar')">📅 Cal</button>
-  <button onclick="go('resources')">🔗 Res</button>
-  <button onclick="go('chat')">💬 Chat</button>
-  <button onclick="go('settings')">⚙️ Set</button>
-  <button onclick="go('saving')">💽 Save</button>
+  <button onclick="go('home')">🏠 <span data-i18n="nav_home">Home</span></button>
+  <button onclick="go('students')">👥 <span data-i18n="nav_students">Students</span></button>
+  <button onclick="go('analytics')">📊 <span data-i18n="nav_analytics">Stats</span></button>
+  <button onclick="go('notes')">📝 <span data-i18n="nav_notes">Notes</span></button>
+  <button onclick="go('calendar')">📅 <span data-i18n="nav_calendar">Cal</span></button>
+  <button onclick="go('resources')">🔗 <span data-i18n="nav_resources">Res</span></button>
+  <button onclick="go('chat')">💬 <span data-i18n="nav_chat">Chat</span></button>
+  <button onclick="go('settings')">⚙️ <span data-i18n="nav_settings">Set</span></button>
+  <button onclick="go('saving')">💽 <span data-i18n="nav_save">Save</span></button>
 </nav>
 
 <script>
-  // Translations
+  // ---------- TRANSLATIONS (comprehensive) ----------
   const translations = {
-    en: { app_title:"📚 Teacher Hub", login_title:"🔐 Welcome", login_instruction:"👩‍🏫 Teacher: Enter password | 👀 Student: Click below" },
-    am: { app_title:"📚 የመምህር ማዕከል", login_title:"🔐 እንኳን ደህና መጡ", login_instruction:"👩‍🏫 መምህር: የይለፍ ቃል ያስገቡ | 👀 ተማሪ: ከታች ይጫኑ" }
+    en: {
+      app_title: "📚 Teacher Hub",
+      login_title: "🔐 Welcome",
+      login_instruction: "👩‍🏫 Teacher: Enter password | 👀 Student: Click below",
+      hint_password: "Teacher password: teacher123",
+      password_placeholder: "Password",
+      enter_teacher: "👩‍🏫 Enter as Teacher",
+      enter_student: "👀 View as Student",
+      dashboard: "📋 Dashboard",
+      students: "🧑‍🎓 Students",
+      analytics: "📊 Analytics",
+      notes: "📝 Notes",
+      calendar: "📅 Calendar",
+      resources: "🔗 Resources",
+      chat: "💬 Chat",
+      settings: "⚙️ Settings",
+      backup: "💽 Backup & Sync",
+      th_name: "Name", th_age: "Age", th_sex: "Sex", th_grade: "Grade", th_total: "Total", th_avg: "Avg", th_actions: "Actions",
+      add_student: "➕ Add Student", cancel: "❌ Cancel", update_student: "✏️ Update Student",
+      name_placeholder: "Name", age_placeholder: "Age", grade_placeholder: "Grade",
+      total_score: "Total Score", average_score: "Class Average",
+      note_placeholder: "Write a note...", add_note: "➕ Add Note",
+      event_placeholder: "Event name", add_event: "➕ Add Event",
+      resource_placeholder: "Paste link or text", add_resource: "➕ Add",
+      chat_name: "Your name", chat_message: "Message", send: "Send",
+      theme: "Theme", font_size: "Font Size", auto_save: "Auto Save", notify: "Notify", clear_data: "Clear Data",
+      export: "Export Backup", import: "Import Backup", language: "Language", reset: "Reset Defaults",
+      nav_home: "Home", nav_students: "Students", nav_analytics: "Stats", nav_notes: "Notes", nav_calendar: "Cal",
+      nav_resources: "Res", nav_chat: "Chat", nav_settings: "Set", nav_save: "Save",
+      invalid_password: "❌ Incorrect password",
+      teacher_mode_on: "✅ Teacher mode activated",
+      student_mode_on: "👀 View-only mode",
+      fill_all_fields: "Please fill all fields correctly.",
+      event_required: "Both event name and date are required.",
+      import_success: "✅ Data imported successfully!",
+      export_success: "📤 Backup exported.",
+      clear_confirm: "Clear all data? This cannot be undone.",
+      validation_name: "✗ letters only",
+      validation_number: "✗ numbers only",
+      validation_score: "✗ 0-100 only",
+      no_students: "No students yet. Add one!"
+    },
+    am: {
+      app_title: "📚 የመምህር ማዕከል",
+      login_title: "🔐 እንኳን ደህና መጡ",
+      login_instruction: "👩‍🏫 መምህር: የይለፍ ቃል ያስገቡ | 👀 ተማሪ: ከታች ይጫኑ",
+      hint_password: "የመምህር ይለፍ ቃል: teacher123",
+      password_placeholder: "የይለፍ ቃል",
+      enter_teacher: "👩‍🏫 እንደ መምህር ግባ",
+      enter_student: "👀 እንደ ተማሪ ተመልከት",
+      dashboard: "📋 ዳሽቦርድ",
+      students: "🧑‍🎓 ተማሪዎች",
+      analytics: "📊 ትንታኔ",
+      notes: "📝 ማስታወሻዎች",
+      calendar: "📅 የቀን መቁጠሪያ",
+      resources: "🔗 መረጃዎች",
+      chat: "💬 ውይይት",
+      settings: "⚙️ ቅንብሮች",
+      backup: "💽 ምትኬ እና ማመሳሰል",
+      th_name: "ስም", th_age: "ዕድሜ", th_sex: "ፆታ", th_grade: "ክፍል", th_total: "ድምር", th_avg: "አማካይ", th_actions: "ተግባራት",
+      add_student: "➕ ተማሪ ጨምር", cancel: "❌ ሰርዝ", update_student: "✏️ ተማሪ አሻሽል",
+      name_placeholder: "ስም", age_placeholder: "ዕድሜ", grade_placeholder: "ክፍል",
+      total_score: "አጠቃላይ ውጤት", average_score: "የክፍል አማካይ",
+      note_placeholder: "ማስታወሻ ጻፍ...", add_note: "➕ አክል",
+      event_placeholder: "የክስተት ስም", add_event: "➕ ክስተት አክል",
+      resource_placeholder: "አገናኝ ወይም ጽሑፍ ለጥፍ", add_resource: "➕ አክል",
+      chat_name: "ስምዎ", chat_message: "መልእክት", send: "ላክ",
+      theme: "ገጽታ", font_size: "የቅርጸ-ቁምፊ መጠን", auto_save: "ራስ-ሰር አስቀምጥ", notify: "አሳውቅ", clear_data: "ውሂብ አጽዳ",
+      export: "ምትኬ ላክ", import: "ምትኬ አምጣ", language: "ቋንቋ", reset: "ወደ ነባሪ መልስ",
+      nav_home: "መነሻ", nav_students: "ተማሪዎች", nav_analytics: "ስታቲስቲክስ", nav_notes: "ማስታወሻ", nav_calendar: "ቀን መቁጠሪያ",
+      nav_resources: "መረጃ", nav_chat: "ውይይት", nav_settings: "ቅንብር", nav_save: "አስቀምጥ",
+      invalid_password: "❌ የተሳሳተ የይለፍ ቃል",
+      teacher_mode_on: "✅ የመምህር ሁነታ ነቅቷል",
+      student_mode_on: "👀 ተመልካች ብቻ",
+      fill_all_fields: "እባክዎ ሁሉንም መስኮች በትክክል ይሙሉ።",
+      event_required: "ሁለቱም የክስተት ስም እና ቀን ያስፈልጋሉ።",
+      import_success: "✅ ውሂብ በተሳካ ሁኔታ ገብቷል!",
+      export_success: "📤 ምትኬ ተልኳል።",
+      clear_confirm: "ሁሉንም ውሂብ ማጽዳት? ይህ ሊቀለበስ አይችልም።",
+      validation_name: "✗ ፊደላት ብቻ",
+      validation_number: "✗ ቁጥሮች ብቻ",
+      validation_score: "✗ 0-100 ብቻ",
+      no_students: "እስካሁን ምንም ተማሪዎች የሉም። አክል!"
+    }
   };
+
   let currentLang = 'en';
   function applyLanguage(lang) {
     currentLang = lang;
@@ -239,44 +493,33 @@ button {
       const key = el.getAttribute('data-i18n');
       if (translations[lang]?.[key]) el.textContent = translations[lang][key];
     });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (translations[lang]?.[key]) el.placeholder = translations[lang][key];
+    });
+    if (cachedStudents.length) renderStudents(cachedStudents);
+    updateStats(cachedStudents);
   }
-  function changeLanguage(lang) { applyLanguage(lang); localStorage.setItem('app_lang', lang); }
+  function changeLanguage(lang) {
+    applyLanguage(lang);
+    localStorage.setItem('app_lang', lang);
+  }
+  function getTranslation(key) {
+    return translations[currentLang]?.[key] || key;
+  }
 
+  // ---------- GLOBALS ----------
   const TEACHER_PASSWORD = "teacher123";
   let isTeacher = false;
   let autoSave = false;
   let cachedStudents = [];
   let editingId = null;
+  let firestoreReady = false;
 
-  function loginAsTeacher() {
-    if (document.getElementById('teacherPassword').value === TEACHER_PASSWORD) {
-      isTeacher = true;
-      document.body.classList.add('teacher-mode');
-      go('home');
-      localStorage.setItem('isTeacher', 'true');
-    } else {
-      document.getElementById('loginMsg').innerText = '❌ Incorrect password';
-    }
-  }
-  function loginAsStudent() { isTeacher = false; document.body.classList.remove('teacher-mode'); go('home'); localStorage.setItem('isTeacher', 'false'); }
-
-  window.addEventListener('load', () => {
-    const savedLang = localStorage.getItem('app_lang') || 'en';
-    document.getElementById('languageSelect').value = savedLang;
-    applyLanguage(savedLang);
-    if (localStorage.getItem('isTeacher') === 'true') {
-      isTeacher = true;
-      document.body.classList.add('teacher-mode');
-      go('home');
-    }
-    if (window.firestoreReady) setupRealtimeListeners();
-    else window.addEventListener('firebase-ready', setupRealtimeListeners);
-    initializeCloudData();
-  });
-
-  const { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc } = window.firestoreModules || {};
+  const { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch } = window.firestoreModules || {};
   function colRef(name) { return collection(window.db, name); }
 
+  // ---------- FIREBASE REALTIME ----------
   function setupRealtimeListeners() {
     onSnapshot(colRef('students'), (snap) => {
       const students = []; snap.forEach(d => students.push({ id: d.id, ...d.data() }));
@@ -297,8 +540,8 @@ button {
     if (!students.length) {
       const row = tbody.insertRow();
       const cell = row.insertCell(0);
-      cell.colSpan = 11;
-      cell.textContent = 'No students yet. Add one!';
+      cell.colSpan = isTeacher ? 11 : 10;
+      cell.textContent = getTranslation('no_students');
       cell.style.textAlign = 'center';
       return;
     }
@@ -323,11 +566,10 @@ button {
       }
     });
   }
-
   function renderNotes(notes) { document.getElementById('notesList').innerHTML = notes.map(t => `<li>${t}</li>`).join(''); }
-  function renderEvents(events) { document.getElementById('events').innerHTML = events.map(e => `<li>${e.date} : ${e.name}</li>`).join(''); }
+  function renderEvents(events) { document.getElementById('events').innerHTML = events.map(e => `<li><strong>${e.date}</strong> : ${e.name}</li>`).join(''); }
   function renderResources(res) { document.getElementById('resList').innerHTML = res.map(r => `<li>${r}</li>`).join(''); }
-  function renderChat(chats) { document.getElementById('chatBox').innerHTML = chats.map(c => `<li>[${c.role}] ${c.name}: ${c.message}</li>`).join(''); }
+  function renderChat(chats) { document.getElementById('chatBox').innerHTML = chats.map(c => `<li><strong>[${c.role}] ${c.name}:</strong> ${c.message}</li>`).join(''); }
 
   function updateStats(students) {
     let sum=0, cnt=0; students.forEach(s=> (s.scores||[]).forEach(v=>{ sum+=+v; cnt++; }));
@@ -337,22 +579,24 @@ button {
     document.getElementById('homeStatAvg').innerText = cnt?(sum/cnt).toFixed(1):'0';
   }
 
+  // ---------- VALIDATION (with translations) ----------
   function validateScore(id, msgId) {
     const val = document.getElementById(id).value;
     const num = Number(val);
     const ok = /^\d+$/.test(val) && num >= 0 && num <= 100;
-    document.getElementById(msgId).innerHTML = ok ? '<span class="valid">✓</span>' : '<span class="invalid">✗ 0-100 only</span>';
+    document.getElementById(msgId).innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_score')}</span>`;
   }
   function validateNum(id, msgId) {
     const val = document.getElementById(id).value;
     const ok = /^\d+$/.test(val) && val !== '';
-    document.getElementById(msgId).innerHTML = ok ? '<span class="valid">✓</span>' : '<span class="invalid">✗ numbers only</span>';
+    document.getElementById(msgId).innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_number')}</span>`;
   }
   function validateName() {
     const ok = /^[A-Za-z ]+$/.test(document.getElementById('name').value);
-    document.getElementById('nameMsg').innerHTML = ok ? '<span class="valid">✓</span>' : '<span class="invalid">✗ letters only</span>';
+    document.getElementById('nameMsg').innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_name')}</span>`;
   }
 
+  // ---------- STUDENT CRUD (with INSTANT UI update) ----------
   function startEdit(id) {
     if (!isTeacher) return;
     const student = cachedStudents.find(s => s.id === id);
@@ -368,49 +612,69 @@ button {
     document.getElementById('s3').value = scores[2];
     validateName(); validateNum('age','ageMsg'); validateNum('grade','gradeMsg');
     validateScore('s1','m1'); validateScore('s2','m2'); validateScore('s3','m3');
-    document.getElementById('addUpdateBtn').textContent = '✏️ Update Student';
+    document.getElementById('addUpdateBtn').textContent = getTranslation('update_student');
     document.getElementById('cancelEditBtn').style.display = 'inline-block';
   }
 
   function cancelEdit() {
     editingId = null;
     ['name','age','grade','s1','s2','s3'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('addUpdateBtn').textContent = '➕ Add Student';
+    document.getElementById('addUpdateBtn').textContent = getTranslation('add_student');
     document.getElementById('cancelEditBtn').style.display = 'none';
   }
 
   async function addOrUpdateStudent() {
-    if (!isTeacher) return alert('Only teacher can modify');
-    const name = document.getElementById('name').value;
-    if (!/^[A-Za-z ]+$/.test(name)) return alert('Name must be letters only');
+    if (!isTeacher) return alert(getTranslation('teacher_mode_on'));
+    const name = document.getElementById('name').value.trim();
+    if (!/^[A-Za-z ]+$/.test(name)) return alert(getTranslation('validation_name'));
+    const age = document.getElementById('age').value;
+    const grade = document.getElementById('grade').value;
+    if (!/^\d+$/.test(age) || !/^\d+$/.test(grade)) return alert(getTranslation('validation_number'));
     const scores = [
       Number(document.getElementById('s1').value) || 0,
       Number(document.getElementById('s2').value) || 0,
       Number(document.getElementById('s3').value) || 0
     ];
-    if (scores.some(s => s < 0 || s > 100)) return alert('Scores must be 0-100');
+    if (scores.some(s => s < 0 || s > 100)) return alert(getTranslation('validation_score'));
 
     const studentData = {
-      name, age: document.getElementById('age').value, sex: document.getElementById('sex').value,
-      grade: document.getElementById('grade').value, scores
+      name, age, sex: document.getElementById('sex').value,
+      grade, scores
     };
 
     if (editingId) {
+      // Update existing: modify cached array and re-render
+      const index = cachedStudents.findIndex(s => s.id === editingId);
+      if (index !== -1) {
+        cachedStudents[index] = { ...cachedStudents[index], ...studentData };
+        renderStudents(cachedStudents);
+        updateStats(cachedStudents);
+      }
       await updateDoc(doc(window.db, 'students', editingId), studentData);
       cancelEdit();
     } else {
+      // ADD NEW: create temp ID, push to cached, render immediately, then sync to Firebase
+      const tempId = 'temp_' + Date.now();
       studentData.createdAt = Date.now();
-      const newId = name + '-' + Date.now();
-      cachedStudents.push({ ...studentData, id: newId });
+      const newStudent = { ...studentData, id: tempId };
+      cachedStudents.push(newStudent);
       renderStudents(cachedStudents);
       updateStats(cachedStudents);
-      await setDoc(doc(window.db, 'students', newId), studentData);
+      
+      // Clear form
       ['name','age','grade','s1','s2','s3'].forEach(id => document.getElementById(id).value = '');
+      
+      // Sync to Firebase (background)
+      const realId = name.replace(/\s+/g, '_') + '-' + Date.now();
+      await setDoc(doc(window.db, 'students', realId), studentData);
+      // Replace temp entry with real one (listener will eventually update, but we can also do it manually)
+      // The Firebase listener will overwrite cachedStudents, so we don't need to manually replace.
     }
   }
 
   async function deleteStudent(id) {
     if (!isTeacher) return;
+    // Optimistic delete
     cachedStudents = cachedStudents.filter(s => s.id !== id);
     renderStudents(cachedStudents);
     updateStats(cachedStudents);
@@ -418,30 +682,148 @@ button {
     if (editingId === id) cancelEdit();
   }
 
-  async function addNote() { if (!isTeacher) return; const text = document.getElementById('note').value; if(text){ await setDoc(doc(window.db, 'notes', Date.now().toString()), {text}); document.getElementById('note').value=''; } }
-  async function addEvent() { if (!isTeacher) return; const name=document.getElementById('event').value, date=document.getElementById('date').value; if(name&&date){ await setDoc(doc(window.db, 'events', Date.now().toString()), {name,date}); } }
-  async function addRes() { if (!isTeacher) return; const text=document.getElementById('res').value; if(text){ await setDoc(doc(window.db, 'resources', Date.now().toString()), {text}); } }
-  async function send() { const role=document.getElementById('role').value, name=document.getElementById('cname').value, msg=document.getElementById('msg').value; if(name&&msg){ await setDoc(doc(window.db, 'chats', Date.now().toString()), {role,name,message:msg,time:new Date().toLocaleTimeString()}); } }
+  // ---------- OTHER COLLECTIONS ----------
+  async function addNote() { if (!isTeacher) return; const text = document.getElementById('note').value.trim(); if(text){ await setDoc(doc(window.db, 'notes', Date.now().toString()), {text}); document.getElementById('note').value=''; } }
+  async function addEvent() {
+    if (!isTeacher) return;
+    const name = document.getElementById('event').value.trim();
+    const date = document.getElementById('date').value;
+    if(!name || !date) { alert(getTranslation('event_required')); return; }
+    await setDoc(doc(window.db, 'events', Date.now().toString()), {name, date});
+    document.getElementById('event').value=''; document.getElementById('date').value='';
+  }
+  async function addRes() { if (!isTeacher) return; const text = document.getElementById('res').value.trim(); if(text){ await setDoc(doc(window.db, 'resources', Date.now().toString()), {text}); document.getElementById('res').value=''; } }
+  async function send() {
+    const role = document.getElementById('role').value;
+    const name = document.getElementById('cname').value.trim();
+    const msg = document.getElementById('msg').value.trim();
+    if(name && msg) {
+      await setDoc(doc(window.db, 'chats', Date.now().toString()), {role, name, message: msg, time: new Date().toLocaleTimeString()});
+      document.getElementById('msg').value = '';
+    }
+  }
 
+  // ---------- IMPORT/EXPORT (full backup) ----------
+  async function exportFile() {
+    const data = {
+      students: cachedStudents,
+      notes: [], events: [], resources: [], chats: []
+    };
+    const notesSnap = await getDocs(colRef('notes')); notesSnap.forEach(d => data.notes.push({id: d.id, ...d.data()}));
+    const eventsSnap = await getDocs(colRef('events')); eventsSnap.forEach(d => data.events.push({id: d.id, ...d.data()}));
+    const resSnap = await getDocs(colRef('resources')); resSnap.forEach(d => data.resources.push({id: d.id, ...d.data()}));
+    const chatSnap = await getDocs(colRef('chats')); chatSnap.forEach(d => data.chats.push({id: d.id, ...d.data()}));
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `teacher_hub_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    alert(getTranslation('export_success'));
+  }
+
+  async function importFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        const batch = writeBatch(window.db);
+        if (confirm('Import will replace current data. Continue?')) {
+          for (let s of data.students || []) {
+            const ref = doc(window.db, 'students', s.id);
+            const { id, ...rest } = s;
+            batch.set(ref, rest);
+          }
+          for (let n of data.notes || []) { const ref = doc(window.db, 'notes', n.id); batch.set(ref, {text: n.text}); }
+          for (let ev of data.events || []) { const ref = doc(window.db, 'events', ev.id); batch.set(ref, {name: ev.name, date: ev.date}); }
+          for (let r of data.resources || []) { const ref = doc(window.db, 'resources', r.id); batch.set(ref, {text: r.text}); }
+          for (let c of data.chats || []) { const ref = doc(window.db, 'chats', c.id); batch.set(ref, {role: c.role, name: c.name, message: c.message, time: c.time}); }
+          await batch.commit();
+          alert(getTranslation('import_success'));
+          location.reload();
+        }
+      } catch(err) { alert('Invalid backup file.'); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  // ---------- UTILS ----------
   function go(id) { document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-  function setTheme(m) { document.body.classList.toggle('light', m==='light'); }
-  function fontSize(px) { document.body.style.fontSize = px+'px'; }
+  function setTheme(m) { document.body.classList.toggle('light', m==='light'); localStorage.setItem('theme', m); }
+  function fontSize(px) { document.body.style.fontSize = px+'px'; localStorage.setItem('fontSize', px); }
   function toggleAutoSave() { autoSave = !autoSave; document.getElementById('autoSaveBtn').textContent = autoSave ? 'On' : 'Off'; }
   function notify() { alert('🔔 Demo notification'); }
-  function clearAll() { if(confirm('Clear all data?')) { localStorage.clear(); location.reload(); } }
-  function saveAllData() { alert('Data auto-syncs to cloud.'); }
-  function exportFile() { alert('Export ready'); }
-  function importFile(e) { alert('Import ready'); }
+  function clearAll() { if(confirm(getTranslation('clear_confirm'))) { localStorage.clear(); location.reload(); } }
+  function saveAllData() { alert('Data is already synced to cloud.'); }
   function renderAll() { location.reload(); }
-  function resetDefaults() { setTheme('dark'); fontSize(16); changeLanguage('en'); }
+  function resetDefaults() { setTheme('dark'); fontSize(16); changeLanguage('en'); document.getElementById('languageSelect').value='en'; }
 
+  // ---------- LOGIN ----------
+  function loginAsTeacher() {
+    if (document.getElementById('teacherPassword').value === TEACHER_PASSWORD) {
+      isTeacher = true;
+      document.body.classList.add('teacher-mode');
+      localStorage.setItem('isTeacher', 'true');
+      go('home');
+      document.getElementById('loginMsg').innerText = '';
+      alert(getTranslation('teacher_mode_on'));
+    } else {
+      document.getElementById('loginMsg').innerText = getTranslation('invalid_password');
+    }
+  }
+  function loginAsStudent() {
+    isTeacher = false;
+    document.body.classList.remove('teacher-mode');
+    localStorage.setItem('isTeacher', 'false');
+    go('home');
+    alert(getTranslation('student_mode_on'));
+  }
+
+  // ---------- INIT SAMPLE DATA ----------
   async function initializeCloudData() {
     const snap = await getDocs(colRef('students'));
     if (snap.empty) {
-      await setDoc(doc(window.db, 'students', 'emma'), { name:'Emma Watson', age:'14', sex:'F', grade:'9', scores:[88,92,79], createdAt:1 });
-      await setDoc(doc(window.db, 'students', 'liam'), { name:'Liam Chen', age:'15', sex:'M', grade:'10', scores:[75,81,90], createdAt:2 });
+      await setDoc(doc(window.db, 'students', 'emma_watson'), { name:'Emma Watson', age:'14', sex:'F', grade:'9', scores:[88,92,79], createdAt:1 });
+      await setDoc(doc(window.db, 'students', 'liam_chen'), { name:'Liam Chen', age:'15', sex:'M', grade:'10', scores:[75,81,90], createdAt:2 });
     }
   }
+
+  // ---------- LOAD ----------
+  window.addEventListener('load', () => {
+    const savedLang = localStorage.getItem('app_lang') || 'en';
+    document.getElementById('languageSelect').value = savedLang;
+    applyLanguage(savedLang);
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+    const savedFont = localStorage.getItem('fontSize');
+    if(savedFont) fontSize(parseInt(savedFont));
+
+    if (window.firestoreReady) {
+      setupRealtimeListeners();
+      initializeCloudData();
+    } else {
+      window.addEventListener('firebase-ready', () => {
+        setupRealtimeListeners();
+        initializeCloudData();
+      });
+    }
+
+    const storedTeacher = localStorage.getItem('isTeacher');
+    if (storedTeacher !== null) {
+      isTeacher = storedTeacher === 'true';
+      if (isTeacher) document.body.classList.add('teacher-mode');
+      go('home');
+    }
+
+    document.getElementById('importFileInput2').addEventListener('change', importFile);
+  });
+
+  setInterval(()=>{ if(autoSave) saveAllData(); }, 10000);
 
   // Expose
   window.loginAsTeacher=loginAsTeacher; window.loginAsStudent=loginAsStudent;
@@ -451,7 +833,6 @@ button {
   window.go=go; window.setTheme=setTheme; window.fontSize=fontSize; window.toggleAutoSave=toggleAutoSave; window.notify=notify;
   window.clearAll=clearAll; window.saveAllData=saveAllData; window.exportFile=exportFile; window.importFile=importFile; window.renderAll=renderAll;
   window.resetDefaults=resetDefaults; window.changeLanguage=changeLanguage;
-  setInterval(()=>{ if(autoSave) saveAllData(); }, 10000);
 </script>
 </body>
 </html>
