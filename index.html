@@ -6,7 +6,7 @@
   <title>📚 Teacher Hub · Professional</title>
   <!-- Firebase Module (graceful offline) -->
   <script type="module">
-    // 🔧 Predefine connection status handler
+    // Predefine connection status handler
     window.updateConnectionStatus = function(connected, msg = '') {
       const el = document.getElementById('connectionStatus');
       if (!el) return;
@@ -33,7 +33,6 @@
       window.firestoreModules = null;
       window.updateConnectionStatus('offline');
       window.dispatchEvent(new CustomEvent('firebase-ready', { detail: { success: false, offline: true } }));
-      // No throw – exit gracefully
     } else {
       try {
         const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
@@ -79,7 +78,11 @@
   </script>
   <style>
     /* ========== GLOBAL STYLES – BOLD & FULL WIDTH ========== */
-    * { box-sizing: border-box; margin: 0; font-weight: 700 !important; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      font-weight: 700 !important;
+    }
     body {
       font-family: 'Segoe UI', 'Roboto', sans-serif;
       background: #0b0c10;
@@ -91,7 +94,10 @@
       width: 100%;
       min-height: 100vh;
     }
-    body.light { background: #f5f7fc; color: #1e1f2a; }
+    body.light {
+      background: #f5f7fc;
+      color: #1e1f2a;
+    }
     header {
       background: linear-gradient(145deg, #6b3e1f, #4a2a14);
       padding: 18px;
@@ -128,10 +134,19 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .connection-status.connected { background: rgba(46, 139, 87, 0.8); }
-    .connection-status.failed { background: rgba(220, 53, 69, 0.8); }
-    .connection-status.offline { background: rgba(255, 193, 7, 0.8); color: #000; }
-    .connection-status:hover { opacity: 0.9; }
+    .connection-status.connected {
+      background: rgba(46, 139, 87, 0.8);
+    }
+    .connection-status.failed {
+      background: rgba(220, 53, 69, 0.8);
+    }
+    .connection-status.offline {
+      background: rgba(255, 193, 7, 0.8);
+      color: #000;
+    }
+    .connection-status:hover {
+      opacity: 0.9;
+    }
     .container {
       display: none;
       padding: 100px 20px 30px;
@@ -140,8 +155,13 @@
       max-width: 100%;
       animation: fadeIn 0.3s ease;
     }
-    .container.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0.5; } to { opacity: 1; } }
+    .container.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0.5; }
+      to { opacity: 1; }
+    }
     button {
       background: #c07a3d;
       color: white;
@@ -156,8 +176,16 @@
       transition: all 0.2s ease;
       border: 1px solid rgba(255,255,240,0.3);
     }
-    button:hover { background: #d98e4a; transform: scale(1.02); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
-    body.light button { background: #a05a2c; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    button:hover {
+      background: #d98e4a;
+      transform: scale(1.02);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    body.light button {
+      background: #a05a2c;
+      color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
     input, select {
       padding: 12px 16px;
       border-radius: 40px;
@@ -175,9 +203,15 @@
       color: #111;
       border: 2px solid #b0b0c0;
     }
-    .teacher-only { display: none; }
-    body.teacher-mode .teacher-only { display: block; }
-    body.teacher-mode .teacher-only-inline { display: inline-block; }
+    .teacher-only {
+      display: none;
+    }
+    body.teacher-mode .teacher-only {
+      display: block;
+    }
+    body.teacher-mode .teacher-only-inline {
+      display: inline-block;
+    }
     nav {
       position: fixed;
       bottom: 0;
@@ -191,8 +225,13 @@
       border-top: 2px solid #b56f2e;
       transition: transform 0.3s;
     }
-    nav.hidden { display: none; }
-    body.light nav { background: #e2e6f0; border-top: 2px solid #8b5a2b; }
+    nav.hidden {
+      display: none;
+    }
+    body.light nav {
+      background: #e2e6f0;
+      border-top: 2px solid #8b5a2b;
+    }
     nav button {
       flex: 1 0 70px;
       background: transparent;
@@ -205,8 +244,13 @@
       padding: 10px 4px;
       box-shadow: none;
     }
-    body.light nav button { color: #3d2b1a; }
-    nav button:hover { background: #3a3a48; color: white; }
+    body.light nav button {
+      color: #3d2b1a;
+    }
+    nav button:hover {
+      background: #3a3a48;
+      color: white;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -217,19 +261,38 @@
       box-shadow: 0 8px 16px rgba(0,0,0,0.3);
       font-weight: 700;
     }
-    body.light table { background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    body.light table {
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
     th, td {
       padding: 14px 10px;
       border-bottom: 1px solid #3a3a50;
       text-align: left;
       font-weight: 700;
     }
-    th { background: #8b5a2b; color: #fff5e6; font-weight: 900; }
-    body.light th { background: #a56e3c; }
-    .valid { color: #7ef0a2; font-weight: 900; }
-    .invalid { color: #ff8a8a; font-weight: 900; }
-    body.light .valid { color: #0f7b3a; }
-    body.light .invalid { color: #c00020; }
+    th {
+      background: #8b5a2b;
+      color: #fff5e6;
+      font-weight: 900;
+    }
+    body.light th {
+      background: #a56e3c;
+    }
+    .valid {
+      color: #7ef0a2;
+      font-weight: 900;
+    }
+    .invalid {
+      color: #ff8a8a;
+      font-weight: 900;
+    }
+    body.light .valid {
+      color: #0f7b3a;
+    }
+    body.light .invalid {
+      color: #c00020;
+    }
     .login-box {
       max-width: 450px;
       margin: 60px auto;
@@ -259,13 +322,18 @@
       font-weight: 800;
       transition: transform 0.2s;
     }
-    .setting-card:hover { transform: translateY(-3px); }
+    .setting-card:hover {
+      transform: translateY(-3px);
+    }
     body.light .setting-card {
       background: #f0f4fe;
       border-left: 8px solid #a86f2c;
       box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     }
-    ul { list-style: none; padding: 0; }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
     li {
       background: #1c1c26;
       margin: 8px 0;
@@ -277,7 +345,11 @@
       transition: all 0.2s;
       color: #f0e6d2;
     }
-    body.light li { background: #e9ecf5; border: 1px solid #cdb79e; color: #1e1f2a; }
+    body.light li {
+      background: #e9ecf5;
+      border: 1px solid #cdb79e;
+      color: #1e1f2a;
+    }
     h2 {
       font-weight: 900;
       color: #f5cba0;
@@ -285,8 +357,13 @@
       border-left: 8px solid #c07a3d;
       padding-left: 20px;
     }
-    body.light h2 { color: #5a3a1e; border-left-color: #a86f2c; }
-    .container { width: 100%; }
+    body.light h2 {
+      color: #5a3a1e;
+      border-left-color: #a86f2c;
+    }
+    .container {
+      width: 100%;
+    }
     body:not(.teacher-mode) .setting-card button,
     body:not(.teacher-mode) #languageSelect,
     body:not(.teacher-mode) #importFileInput,
@@ -311,13 +388,14 @@
       z-index: 30;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .success-banner { background: #2e8b57; }
+    .success-banner {
+      background: #2e8b57;
+    }
     .validation-msg {
       display: inline-block;
       min-width: 100px;
       margin-left: 5px;
     }
-    /* Viewer counter and like button */
     .stats-bar {
       display: flex;
       justify-content: flex-end;
@@ -336,8 +414,9 @@
       align-items: center;
       gap: 8px;
     }
-    .like-btn.liked { background: #27ae60; }
-    /* Student mode restrictions handled via CSS and JS */
+    .like-btn.liked {
+      background: #27ae60;
+    }
   </style>
 </head>
 <body class="dark">
@@ -536,36 +615,160 @@
 </nav>
 
 <script>
-  // ========== TRANSLATIONS (abridged for length; full versions present) ==========
+  // ========== TRANSLATIONS ==========
   const translations = {
     en: {
-      app_title: "📚 Teacher Hub", login_title: "🔐 Welcome", login_instruction: "👩‍🏫 Teacher: Enter password | 👀 Student: Enter email",
-      password_placeholder: "Password", enter_teacher: "👩‍🏫 Enter as Teacher", enter_student: "👀 View as Student",
-      dashboard: "📋 Dashboard", students: "🧑‍🎓 Students", analytics: "📊 Analytics", notes: "📝 Notes", calendar: "📅 Calendar",
-      resources: "🔗 Resources", chat: "💬 Chat", settings: "⚙️ Settings", backup: "💽 Backup & Sync",
-      th_name: "Name", th_age: "Age", th_sex: "Sex", th_grade: "Grade", th_total: "Total", th_avg: "Avg", th_actions: "Actions",
-      add_student: "➕ Add Student", cancel: "❌ Cancel", update_student: "✏️ Update Student",
-      name_placeholder: "Name", age_placeholder: "Age", grade_placeholder: "Grade",
-      total_score: "Total Score", average_score: "Class Average",
-      note_placeholder: "Write a note...", add_note: "➕ Add Note",
-      event_placeholder: "Event name", add_event: "➕ Add Event",
-      resource_placeholder: "Paste link or text", add_resource: "➕ Add",
-      chat_name: "Your name", chat_message: "Message", send: "Send",
-      theme: "Theme", font_size: "Font Size", auto_save: "Auto Save", notify: "Notify", clear_data: "Clear Data",
-      export: "Export Backup", import: "Import Backup", language: "Language", reset: "Reset Defaults",
-      nav_home: "Home", nav_students: "Students", nav_analytics: "Stats", nav_notes: "Notes", nav_calendar: "Cal",
-      nav_resources: "Res", nav_chat: "Chat", nav_settings: "Set", nav_save: "Save",
-      invalid_password: "❌ Incorrect password", invalid_email: "❌ Please enter a valid email address",
-      teacher_mode_on: "✅ Teacher mode activated", student_mode_on: "👀 View-only mode",
-      fill_all_fields: "Please fill all fields correctly.", event_required: "Both event name and date are required.",
-      import_success: "✅ Data imported successfully!", export_success: "📤 Backup exported.",
+      app_title: "📚 Teacher Hub",
+      login_title: "🔐 Welcome",
+      login_instruction: "👩‍🏫 Teacher: Enter password | 👀 Student: Enter email",
+      password_placeholder: "Password",
+      enter_teacher: "👩‍🏫 Enter as Teacher",
+      enter_student: "👀 View as Student",
+      dashboard: "📋 Dashboard",
+      students: "🧑‍🎓 Students",
+      analytics: "📊 Analytics",
+      notes: "📝 Notes",
+      calendar: "📅 Calendar",
+      resources: "🔗 Resources",
+      chat: "💬 Chat",
+      settings: "⚙️ Settings",
+      backup: "💽 Backup & Sync",
+      th_name: "Name",
+      th_age: "Age",
+      th_sex: "Sex",
+      th_grade: "Grade",
+      th_total: "Total",
+      th_avg: "Avg",
+      th_actions: "Actions",
+      add_student: "➕ Add Student",
+      cancel: "❌ Cancel",
+      update_student: "✏️ Update Student",
+      name_placeholder: "Name",
+      age_placeholder: "Age",
+      grade_placeholder: "Grade",
+      total_score: "Total Score",
+      average_score: "Class Average",
+      note_placeholder: "Write a note...",
+      add_note: "➕ Add Note",
+      event_placeholder: "Event name",
+      add_event: "➕ Add Event",
+      resource_placeholder: "Paste link or text",
+      add_resource: "➕ Add",
+      chat_name: "Your name",
+      chat_message: "Message",
+      send: "Send",
+      theme: "Theme",
+      font_size: "Font Size",
+      auto_save: "Auto Save",
+      notify: "Notify",
+      clear_data: "Clear Data",
+      export: "Export Backup",
+      import: "Import Backup",
+      language: "Language",
+      reset: "Reset Defaults",
+      nav_home: "Home",
+      nav_students: "Students",
+      nav_analytics: "Stats",
+      nav_notes: "Notes",
+      nav_calendar: "Cal",
+      nav_resources: "Res",
+      nav_chat: "Chat",
+      nav_settings: "Set",
+      nav_save: "Save",
+      invalid_password: "❌ Incorrect password",
+      invalid_email: "❌ Please enter a valid email address",
+      teacher_mode_on: "✅ Teacher mode activated",
+      student_mode_on: "👀 View-only mode",
+      fill_all_fields: "Please fill all fields correctly.",
+      event_required: "Both event name and date are required.",
+      import_success: "✅ Data imported successfully!",
+      export_success: "📤 Backup exported.",
       clear_confirm: "Clear all data? This cannot be undone.",
-      validation_name: "✗ letters only", validation_number: "✗ numbers only", validation_score: "✗ 0-100 only",
-      no_students: "No students yet. Add one!", no_notes: "No notes yet.",
+      validation_name: "✗ letters only",
+      validation_number: "✗ numbers only",
+      validation_score: "✗ 0-100 only",
+      no_students: "No students yet. Add one!",
+      no_notes: "No notes yet.",
       firebase_failed: "Firebase connection failed. Using local mode.",
-      firebase_connected: "Firebase connected", firebase_disconnected: "Firebase disconnected"
+      firebase_connected: "Firebase connected",
+      firebase_disconnected: "Firebase disconnected"
     },
-    am: { /* Amharic translations unchanged for brevity; present in full file */ }
+    am: {
+      app_title: "📚 የመምህር ማዕከል",
+      login_title: "🔐 እንኳን ደህና መጡ",
+      login_instruction: "👩‍🏫 መምህር: የይለፍ ቃል ያስገቡ | 👀 ተማሪ: ኢሜይል ያስገቡ",
+      password_placeholder: "የይለፍ ቃል",
+      enter_teacher: "👩‍🏫 እንደ መምህር ግባ",
+      enter_student: "👀 እንደ ተማሪ ተመልከት",
+      dashboard: "📋 ዳሽቦርድ",
+      students: "🧑‍🎓 ተማሪዎች",
+      analytics: "📊 ትንታኔ",
+      notes: "📝 ማስታወሻዎች",
+      calendar: "📅 የቀን መቁጠሪያ",
+      resources: "🔗 መረጃዎች",
+      chat: "💬 ውይይት",
+      settings: "⚙️ ቅንብሮች",
+      backup: "💽 ምትኬ እና ማመሳሰል",
+      th_name: "ስም",
+      th_age: "ዕድሜ",
+      th_sex: "ፆታ",
+      th_grade: "ክፍል",
+      th_total: "ድምር",
+      th_avg: "አማካይ",
+      th_actions: "ተግባራት",
+      add_student: "➕ ተማሪ ጨምር",
+      cancel: "❌ ሰርዝ",
+      update_student: "✏️ ተማሪ አሻሽል",
+      name_placeholder: "ስም",
+      age_placeholder: "ዕድሜ",
+      grade_placeholder: "ክፍል",
+      total_score: "አጠቃላይ ውጤት",
+      average_score: "የክፍል አማካይ",
+      note_placeholder: "ማስታወሻ ጻፍ...",
+      add_note: "➕ አክል",
+      event_placeholder: "የክስተት ስም",
+      add_event: "➕ ክስተት አክል",
+      resource_placeholder: "አገናኝ ወይም ጽሑፍ ለጥፍ",
+      add_resource: "➕ አክል",
+      chat_name: "ስምዎ",
+      chat_message: "መልእክት",
+      send: "ላክ",
+      theme: "ገጽታ",
+      font_size: "የቅርጸ-ቁምፊ መጠን",
+      auto_save: "ራስ-ሰር አስቀምጥ",
+      notify: "አሳውቅ",
+      clear_data: "ውሂብ አጽዳ",
+      export: "ምትኬ ላክ",
+      import: "ምትኬ አምጣ",
+      language: "ቋንቋ",
+      reset: "ወደ ነባሪ መልስ",
+      nav_home: "መነሻ",
+      nav_students: "ተማሪዎች",
+      nav_analytics: "ስታቲስቲክስ",
+      nav_notes: "ማስታወሻ",
+      nav_calendar: "ቀን መቁጠሪያ",
+      nav_resources: "መረጃ",
+      nav_chat: "ውይይት",
+      nav_settings: "ቅንብር",
+      nav_save: "አስቀምጥ",
+      invalid_password: "❌ የተሳሳተ የይለፍ ቃል",
+      invalid_email: "❌ ትክክለኛ ኢሜይል ያስገቡ",
+      teacher_mode_on: "✅ የመምህር ሁነታ ነቅቷል",
+      student_mode_on: "👀 ተመልካች ብቻ",
+      fill_all_fields: "እባክዎ ሁሉንም መስኮች በትክክል ይሙሉ።",
+      event_required: "ሁለቱም የክስተት ስም እና ቀን ያስፈልጋሉ።",
+      import_success: "✅ ውሂብ በተሳካ ሁኔታ ገብቷል!",
+      export_success: "📤 ምትኬ ተልኳል።",
+      clear_confirm: "ሁሉንም ውሂብ ማጽዳት? ይህ ሊቀለበስ አይችልም።",
+      validation_name: "✗ ፊደላት ብቻ",
+      validation_number: "✗ ቁጥሮች ብቻ",
+      validation_score: "✗ 0-100 ብቻ",
+      no_students: "እስካሁን ምንም ተማሪዎች የሉም። አክል!",
+      no_notes: "እስካሁን ምንም ማስታወሻ የለም።",
+      firebase_failed: "የFirebase ግንኙነት አልተሳካም። አካባቢያዊ ሁነታን በመጠቀም ላይ።",
+      firebase_connected: "Firebase ተገናኝቷል",
+      firebase_disconnected: "Firebase ተቋርጧል"
+    }
   };
 
   let currentLang = 'en';
@@ -588,7 +791,9 @@
     applyLanguage(lang);
     localStorage.setItem('app_lang', lang);
   }
-  function getTranslation(key) { return translations[currentLang]?.[key] || key; }
+  function getTranslation(key) {
+    return translations[currentLang]?.[key] || key;
+  }
 
   // ========== GLOBALS ==========
   const TEACHER_PASSWORD = "teacher123";
@@ -600,9 +805,14 @@
   let viewCount = 0, likeCount = 0, userLiked = false;
 
   const STORAGE_KEYS = {
-    students: 'teacher_hub_students', notes: 'teacher_hub_notes', events: 'teacher_hub_events',
-    resources: 'teacher_hub_resources', chats: 'teacher_hub_chats', views: 'teacher_hub_views',
-    likes: 'teacher_hub_likes', liked: 'teacher_hub_user_liked'
+    students: 'teacher_hub_students',
+    notes: 'teacher_hub_notes',
+    events: 'teacher_hub_events',
+    resources: 'teacher_hub_resources',
+    chats: 'teacher_hub_chats',
+    views: 'teacher_hub_views',
+    likes: 'teacher_hub_likes',
+    liked: 'teacher_hub_user_liked'
   };
 
   function loadFromLocalStorage() {
