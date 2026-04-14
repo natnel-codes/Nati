@@ -203,14 +203,37 @@
       color: #111;
       border: 2px solid #b0b0c0;
     }
+    /* Teacher-only elements are hidden by default, shown only when teacher mode */
     .teacher-only {
-      display: none;
+      display: none !important;
     }
     body.teacher-mode .teacher-only {
-      display: block;
+      display: block !important;
     }
     body.teacher-mode .teacher-only-inline {
-      display: inline-block;
+      display: inline-block !important;
+    }
+    /* Student restrictions: disable interactive elements except chat and like */
+    body:not(.teacher-mode) button:not(#likeButton):not(nav button):not(#chat button):not(#chat input):not(#chat select),
+    body:not(.teacher-mode) input:not(#cname):not(#msg),
+    body:not(.teacher-mode) select:not(#role),
+    body:not(.teacher-mode) .setting-card button,
+    body:not(.teacher-mode) #languageSelect,
+    body:not(.teacher-mode) #importFileInput,
+    body:not(.teacher-mode) #importFileInput2 {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    /* But allow chat section fully */
+    body:not(.teacher-mode) #chat input,
+    body:not(.teacher-mode) #chat select,
+    body:not(.teacher-mode) #chat button {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+    /* Like button always clickable */
+    #likeButton {
+      cursor: pointer;
     }
     nav {
       position: fixed;
@@ -363,14 +386,6 @@
     }
     .container {
       width: 100%;
-    }
-    body:not(.teacher-mode) .setting-card button,
-    body:not(.teacher-mode) #languageSelect,
-    body:not(.teacher-mode) #importFileInput,
-    body:not(.teacher-mode) #importFileInput2,
-    body:not(.teacher-mode) .teacher-only {
-      opacity: 0.6;
-      pointer-events: none;
     }
     .error-banner {
       background: #ff4d4d;
