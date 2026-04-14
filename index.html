@@ -203,7 +203,6 @@
       color: #111;
       border: 2px solid #b0b0c0;
     }
-    /* Teacher-only elements are hidden by default, shown only when teacher mode */
     .teacher-only {
       display: none !important;
     }
@@ -213,7 +212,6 @@
     body.teacher-mode .teacher-only-inline {
       display: inline-block !important;
     }
-    /* Student restrictions: disable interactive elements except chat and like */
     body:not(.teacher-mode) button:not(#likeButton):not(nav button):not(#chat button):not(#chat input):not(#chat select),
     body:not(.teacher-mode) input:not(#cname):not(#msg),
     body:not(.teacher-mode) select:not(#role),
@@ -224,14 +222,12 @@
       opacity: 0.6;
       pointer-events: none;
     }
-    /* But allow chat section fully */
     body:not(.teacher-mode) #chat input,
     body:not(.teacher-mode) #chat select,
     body:not(.teacher-mode) #chat button {
       opacity: 1 !important;
       pointer-events: auto !important;
     }
-    /* Like button always clickable */
     #likeButton {
       cursor: pointer;
     }
@@ -451,12 +447,12 @@
     <p data-i18n="login_instruction" style="margin:20px 0;">👩‍🏫 Teacher: Enter password | 👀 Student: Enter email</p>
     
     <input id="teacherPassword" type="password" placeholder="Password" data-i18n-placeholder="password_placeholder" value="">
-    <button onclick="loginAsTeacher()" style="width:100%;" data-i18n="enter_teacher">👩‍🏫 Enter as Teacher</button>
+    <button onclick="window.loginAsTeacher()" style="width:100%;" data-i18n="enter_teacher">👩‍🏫 Enter as Teacher</button>
     
     <p style="margin:20px 0;">or</p>
     
     <input id="studentEmail" type="email" placeholder="student@example.com" data-i18n-placeholder="email_placeholder" value="">
-    <button onclick="loginAsStudent()" style="width:100%; background:#5a5a70;" data-i18n="enter_student">👀 View as Student</button>
+    <button onclick="window.loginAsStudent()" style="width:100%; background:#5a5a70;" data-i18n="enter_student">👀 View as Student</button>
     
     <p id="loginMsg" style="margin-top:20px; font-weight:900;"></p>
   </div>
@@ -466,7 +462,7 @@
 <div class="container" id="home">
   <div class="stats-bar">
     <span>👁️ Views: <span id="viewCount">0</span></span>
-    <span id="likeButton" class="like-btn" onclick="toggleLike()">❤️ <span id="likeCount">0</span></span>
+    <span id="likeButton" class="like-btn" onclick="window.toggleLike()">❤️ <span id="likeCount">0</span></span>
   </div>
   <h2 data-i18n="dashboard">📋 Dashboard</h2>
   <div style="background: linear-gradient(135deg, #2e5a4c, #1e3f36); padding:35px; border-radius:30px; color:white; text-align:center; font-weight:900; font-size:1.6rem; box-shadow:0 8px 16px rgba(0,0,0,0.4);">
@@ -488,21 +484,21 @@
 <div class="container" id="students">
   <h2 data-i18n="students">🧑‍🎓 Students</h2>
   <div class="teacher-only" style="background:#1e1e28; padding:22px; border-radius:30px; margin-bottom:30px; box-shadow:0 6px 12px rgba(0,0,0,0.4);">
-    <input id="name" placeholder="Name" data-i18n-placeholder="name_placeholder" oninput="validateName()"> 
+    <input id="name" placeholder="Name" data-i18n-placeholder="name_placeholder" oninput="window.validateName()"> 
     <span id="nameMsg" class="validation-msg"></span>
-    <input id="age" placeholder="Age" data-i18n-placeholder="age_placeholder" oninput="validateNum('age','ageMsg')"> 
+    <input id="age" placeholder="Age" data-i18n-placeholder="age_placeholder" oninput="window.validateNum('age','ageMsg')"> 
     <span id="ageMsg" class="validation-msg"></span>
     <select id="sex"><option>M</option><option>F</option></select>
-    <input id="grade" placeholder="Grade" data-i18n-placeholder="grade_placeholder" oninput="validateNum('grade','gradeMsg')"> 
+    <input id="grade" placeholder="Grade" data-i18n-placeholder="grade_placeholder" oninput="window.validateNum('grade','gradeMsg')"> 
     <span id="gradeMsg" class="validation-msg"></span>
-    <input id="s1" placeholder="S1" style="width:85px;" oninput="validateScore('s1','m1')"> 
+    <input id="s1" placeholder="S1" style="width:85px;" oninput="window.validateScore('s1','m1')"> 
     <span id="m1" class="validation-msg"></span>
-    <input id="s2" placeholder="S2" style="width:85px;" oninput="validateScore('s2','m2')"> 
+    <input id="s2" placeholder="S2" style="width:85px;" oninput="window.validateScore('s2','m2')"> 
     <span id="m2" class="validation-msg"></span>
-    <input id="s3" placeholder="S3" style="width:85px;" oninput="validateScore('s3','m3')"> 
+    <input id="s3" placeholder="S3" style="width:85px;" oninput="window.validateScore('s3','m3')"> 
     <span id="m3" class="validation-msg"></span>
-    <button onclick="addOrUpdateStudent()" id="addUpdateBtn" data-i18n="add_student">➕ Add Student</button>
-    <button onclick="cancelEdit()" id="cancelEditBtn" style="display:none;" data-i18n="cancel">❌ Cancel</button>
+    <button onclick="window.addOrUpdateStudent()" id="addUpdateBtn" data-i18n="add_student">➕ Add Student</button>
+    <button onclick="window.cancelEdit()" id="cancelEditBtn" style="display:none;" data-i18n="cancel">❌ Cancel</button>
   </div>
   <div style="overflow-x:auto; width:100%;">
     <table id="studentTable">
@@ -526,7 +522,7 @@
   <h2 data-i18n="notes">📝 Notes</h2>
   <div class="teacher-only" style="margin-bottom:30px;">
     <input id="note" placeholder="Write a note..." data-i18n-placeholder="note_placeholder" style="width:70%;">
-    <button onclick="addNote()" data-i18n="add_note">➕ Add Note</button>
+    <button onclick="window.addNote()" data-i18n="add_note">➕ Add Note</button>
   </div>
   <ul id="notesList"></ul>
 </div>
@@ -537,7 +533,7 @@
   <div class="teacher-only" style="margin-bottom:30px;">
     <input id="event" placeholder="Event name" data-i18n-placeholder="event_placeholder">
     <input type="date" id="date">
-    <button onclick="addEvent()" data-i18n="add_event">➕ Add Event</button>
+    <button onclick="window.addEvent()" data-i18n="add_event">➕ Add Event</button>
   </div>
   <ul id="events"></ul>
 </div>
@@ -547,7 +543,7 @@
   <h2 data-i18n="resources">🔗 Resources</h2>
   <div class="teacher-only" style="margin-bottom:30px;">
     <input id="res" placeholder="Paste link or text" data-i18n-placeholder="resource_placeholder" style="width:70%;">
-    <button onclick="addRes()" data-i18n="add_resource">➕ Add</button>
+    <button onclick="window.addRes()" data-i18n="add_resource">➕ Add</button>
   </div>
   <ul id="resList"></ul>
 </div>
@@ -559,7 +555,7 @@
     <select id="role"><option>Teacher</option><option>Student</option></select>
     <input id="cname" placeholder="Your name" data-i18n-placeholder="chat_name">
     <input id="msg" placeholder="Message" data-i18n-placeholder="chat_message" style="flex:2;">
-    <button onclick="send()" data-i18n="send">Send</button>
+    <button onclick="window.send()" data-i18n="send">Send</button>
   </div>
   <ul id="chatBox" style="max-height:400px; overflow-y:auto;"></ul>
 </div>
@@ -569,37 +565,37 @@
   <h2 data-i18n="settings">⚙️ Settings</h2>
   <div class="settings-grid">
     <div class="setting-card"><label data-i18n="theme">Theme</label><br>
-      <button onclick="if(isTeacher) setTheme('dark')">🌙 Dark</button>
-      <button onclick="if(isTeacher) setTheme('light')">☀️ Light</button>
+      <button onclick="if(window.isTeacher) window.setTheme('dark')">🌙 Dark</button>
+      <button onclick="if(window.isTeacher) window.setTheme('light')">☀️ Light</button>
     </div>
     <div class="setting-card"><label data-i18n="font_size">Font Size</label><br>
-      <button onclick="if(isTeacher) fontSize(14)">S</button>
-      <button onclick="if(isTeacher) fontSize(18)">M</button>
-      <button onclick="if(isTeacher) fontSize(22)">L</button>
+      <button onclick="if(window.isTeacher) window.fontSize(14)">S</button>
+      <button onclick="if(window.isTeacher) window.fontSize(18)">M</button>
+      <button onclick="if(window.isTeacher) window.fontSize(22)">L</button>
     </div>
     <div class="setting-card"><label data-i18n="auto_save">Auto Save</label><br>
-      <button onclick="if(isTeacher) toggleAutoSave()" id="autoSaveBtn">Off</button>
+      <button onclick="if(window.isTeacher) window.toggleAutoSave()" id="autoSaveBtn">Off</button>
     </div>
     <div class="setting-card"><label data-i18n="notify">Notify</label><br>
-      <button onclick="if(isTeacher) notify()">🔔 Test</button>
+      <button onclick="if(window.isTeacher) window.notify()">🔔 Test</button>
     </div>
     <div class="setting-card"><label data-i18n="clear_data">Clear Data</label><br>
-      <button onclick="if(isTeacher) clearAll()">🧹 Clear All</button>
+      <button onclick="if(window.isTeacher) window.clearAll()">🧹 Clear All</button>
     </div>
     <div class="setting-card"><label data-i18n="export">Export Backup</label><br>
-      <button onclick="if(isTeacher) exportFile()">📤 Export</button>
+      <button onclick="if(window.isTeacher) window.exportFile()">📤 Export</button>
     </div>
     <div class="setting-card"><label data-i18n="import">Import Backup</label><br>
-      <input type="file" id="importFileInput" accept=".json" onchange="if(isTeacher) importFile(event)" disabled>
+      <input type="file" id="importFileInput" accept=".json" onchange="if(window.isTeacher) window.importFile(event)" disabled>
     </div>
     <div class="setting-card"><label data-i18n="language">Language</label><br>
-      <select id="languageSelect" onchange="if(isTeacher) changeLanguage(this.value)" disabled>
+      <select id="languageSelect" onchange="if(window.isTeacher) window.changeLanguage(this.value)" disabled>
         <option value="en">English</option>
         <option value="am">አማርኛ</option>
       </select>
     </div>
     <div class="setting-card"><label data-i18n="reset">Reset Defaults</label><br>
-      <button onclick="if(isTeacher) resetDefaults()">⟲ Reset</button>
+      <button onclick="if(window.isTeacher) window.resetDefaults()">⟲ Reset</button>
     </div>
   </div>
 </div>
@@ -609,28 +605,31 @@
   <h2 data-i18n="backup">💽 Backup & Sync</h2>
   <div style="background:#1e1e28; padding:30px; border-radius:30px;">
     <p style="font-size:1.2rem; margin-bottom:20px; font-weight:800;">Data auto-syncs to cloud. Use export/import for local backup.</p>
-    <button onclick="if(isTeacher) exportFile()" style="font-size:1.3rem;">📤 Export All Data</button>
-    <button onclick="if(isTeacher) document.getElementById('importFileInput2').click()" style="font-size:1.3rem;">📥 Import Backup</button>
-    <input type="file" id="importFileInput2" accept=".json" style="display:none;" onchange="if(isTeacher) importFile(event)">
-    <button onclick="if(isTeacher) saveAllData()" style="font-size:1.3rem;">💾 Force Save Now</button>
-    <button onclick="renderAll()" style="font-size:1.3rem;">🔄 Reload App</button>
+    <button onclick="if(window.isTeacher) window.exportFile()" style="font-size:1.3rem;">📤 Export All Data</button>
+    <button onclick="if(window.isTeacher) document.getElementById('importFileInput2').click()" style="font-size:1.3rem;">📥 Import Backup</button>
+    <input type="file" id="importFileInput2" accept=".json" style="display:none;" onchange="if(window.isTeacher) window.importFile(event)">
+    <button onclick="if(window.isTeacher) window.saveAllData()" style="font-size:1.3rem;">💾 Force Save Now</button>
+    <button onclick="window.renderAll()" style="font-size:1.3rem;">🔄 Reload App</button>
   </div>
 </div>
 
 <nav id="bottomNav" class="hidden">
-  <button onclick="go('home')">🏠 <span data-i18n="nav_home">Home</span></button>
-  <button onclick="go('students')">👥 <span data-i18n="nav_students">Students</span></button>
-  <button onclick="go('analytics')">📊 <span data-i18n="nav_analytics">Stats</span></button>
-  <button onclick="go('notes')">📝 <span data-i18n="nav_notes">Notes</span></button>
-  <button onclick="go('calendar')">📅 <span data-i18n="nav_calendar">Cal</span></button>
-  <button onclick="go('resources')">🔗 <span data-i18n="nav_resources">Res</span></button>
-  <button onclick="go('chat')">💬 <span data-i18n="nav_chat">Chat</span></button>
-  <button onclick="go('settings')">⚙️ <span data-i18n="nav_settings">Set</span></button>
-  <button onclick="go('saving')">💽 <span data-i18n="nav_save">Save</span></button>
+  <button onclick="window.go('home')">🏠 <span data-i18n="nav_home">Home</span></button>
+  <button onclick="window.go('students')">👥 <span data-i18n="nav_students">Students</span></button>
+  <button onclick="window.go('analytics')">📊 <span data-i18n="nav_analytics">Stats</span></button>
+  <button onclick="window.go('notes')">📝 <span data-i18n="nav_notes">Notes</span></button>
+  <button onclick="window.go('calendar')">📅 <span data-i18n="nav_calendar">Cal</span></button>
+  <button onclick="window.go('resources')">🔗 <span data-i18n="nav_resources">Res</span></button>
+  <button onclick="window.go('chat')">💬 <span data-i18n="nav_chat">Chat</span></button>
+  <button onclick="window.go('settings')">⚙️ <span data-i18n="nav_settings">Set</span></button>
+  <button onclick="window.go('saving')">💽 <span data-i18n="nav_save">Save</span></button>
 </nav>
 
 <script>
-  // ========== TRANSLATIONS ==========
+  // ========== GLOBAL FUNCTIONS & FIXES ==========
+  // Ensure all functions are globally accessible before DOM is ready
+  
+  // Translations
   const translations = {
     en: {
       app_title: "📚 Teacher Hub",
@@ -648,48 +647,18 @@
       chat: "💬 Chat",
       settings: "⚙️ Settings",
       backup: "💽 Backup & Sync",
-      th_name: "Name",
-      th_age: "Age",
-      th_sex: "Sex",
-      th_grade: "Grade",
-      th_total: "Total",
-      th_avg: "Avg",
-      th_actions: "Actions",
-      add_student: "➕ Add Student",
-      cancel: "❌ Cancel",
-      update_student: "✏️ Update Student",
-      name_placeholder: "Name",
-      age_placeholder: "Age",
-      grade_placeholder: "Grade",
-      total_score: "Total Score",
-      average_score: "Class Average",
-      note_placeholder: "Write a note...",
-      add_note: "➕ Add Note",
-      event_placeholder: "Event name",
-      add_event: "➕ Add Event",
-      resource_placeholder: "Paste link or text",
-      add_resource: "➕ Add",
-      chat_name: "Your name",
-      chat_message: "Message",
-      send: "Send",
-      theme: "Theme",
-      font_size: "Font Size",
-      auto_save: "Auto Save",
-      notify: "Notify",
-      clear_data: "Clear Data",
-      export: "Export Backup",
-      import: "Import Backup",
-      language: "Language",
-      reset: "Reset Defaults",
-      nav_home: "Home",
-      nav_students: "Students",
-      nav_analytics: "Stats",
-      nav_notes: "Notes",
-      nav_calendar: "Cal",
-      nav_resources: "Res",
-      nav_chat: "Chat",
-      nav_settings: "Set",
-      nav_save: "Save",
+      th_name: "Name", th_age: "Age", th_sex: "Sex", th_grade: "Grade", th_total: "Total", th_avg: "Avg", th_actions: "Actions",
+      add_student: "➕ Add Student", cancel: "❌ Cancel", update_student: "✏️ Update Student",
+      name_placeholder: "Name", age_placeholder: "Age", grade_placeholder: "Grade",
+      total_score: "Total Score", average_score: "Class Average",
+      note_placeholder: "Write a note...", add_note: "➕ Add Note",
+      event_placeholder: "Event name", add_event: "➕ Add Event",
+      resource_placeholder: "Paste link or text", add_resource: "➕ Add",
+      chat_name: "Your name", chat_message: "Message", send: "Send",
+      theme: "Theme", font_size: "Font Size", auto_save: "Auto Save", notify: "Notify", clear_data: "Clear Data",
+      export: "Export Backup", import: "Import Backup", language: "Language", reset: "Reset Defaults",
+      nav_home: "Home", nav_students: "Students", nav_analytics: "Stats", nav_notes: "Notes", nav_calendar: "Cal",
+      nav_resources: "Res", nav_chat: "Chat", nav_settings: "Set", nav_save: "Save",
       invalid_password: "❌ Incorrect password",
       invalid_email: "❌ Please enter a valid email address",
       teacher_mode_on: "✅ Teacher mode activated",
@@ -724,48 +693,18 @@
       chat: "💬 ውይይት",
       settings: "⚙️ ቅንብሮች",
       backup: "💽 ምትኬ እና ማመሳሰል",
-      th_name: "ስም",
-      th_age: "ዕድሜ",
-      th_sex: "ፆታ",
-      th_grade: "ክፍል",
-      th_total: "ድምር",
-      th_avg: "አማካይ",
-      th_actions: "ተግባራት",
-      add_student: "➕ ተማሪ ጨምር",
-      cancel: "❌ ሰርዝ",
-      update_student: "✏️ ተማሪ አሻሽል",
-      name_placeholder: "ስም",
-      age_placeholder: "ዕድሜ",
-      grade_placeholder: "ክፍል",
-      total_score: "አጠቃላይ ውጤት",
-      average_score: "የክፍል አማካይ",
-      note_placeholder: "ማስታወሻ ጻፍ...",
-      add_note: "➕ አክል",
-      event_placeholder: "የክስተት ስም",
-      add_event: "➕ ክስተት አክል",
-      resource_placeholder: "አገናኝ ወይም ጽሑፍ ለጥፍ",
-      add_resource: "➕ አክል",
-      chat_name: "ስምዎ",
-      chat_message: "መልእክት",
-      send: "ላክ",
-      theme: "ገጽታ",
-      font_size: "የቅርጸ-ቁምፊ መጠን",
-      auto_save: "ራስ-ሰር አስቀምጥ",
-      notify: "አሳውቅ",
-      clear_data: "ውሂብ አጽዳ",
-      export: "ምትኬ ላክ",
-      import: "ምትኬ አምጣ",
-      language: "ቋንቋ",
-      reset: "ወደ ነባሪ መልስ",
-      nav_home: "መነሻ",
-      nav_students: "ተማሪዎች",
-      nav_analytics: "ስታቲስቲክስ",
-      nav_notes: "ማስታወሻ",
-      nav_calendar: "ቀን መቁጠሪያ",
-      nav_resources: "መረጃ",
-      nav_chat: "ውይይት",
-      nav_settings: "ቅንብር",
-      nav_save: "አስቀምጥ",
+      th_name: "ስም", th_age: "ዕድሜ", th_sex: "ፆታ", th_grade: "ክፍል", th_total: "ድምር", th_avg: "አማካይ", th_actions: "ተግባራት",
+      add_student: "➕ ተማሪ ጨምር", cancel: "❌ ሰርዝ", update_student: "✏️ ተማሪ አሻሽል",
+      name_placeholder: "ስም", age_placeholder: "ዕድሜ", grade_placeholder: "ክፍል",
+      total_score: "አጠቃላይ ውጤት", average_score: "የክፍል አማካይ",
+      note_placeholder: "ማስታወሻ ጻፍ...", add_note: "➕ አክል",
+      event_placeholder: "የክስተት ስም", add_event: "➕ ክስተት አክል",
+      resource_placeholder: "አገናኝ ወይም ጽሑፍ ለጥፍ", add_resource: "➕ አክል",
+      chat_name: "ስምዎ", chat_message: "መልእክት", send: "ላክ",
+      theme: "ገጽታ", font_size: "የቅርጸ-ቁምፊ መጠን", auto_save: "ራስ-ሰር አስቀምጥ", notify: "አሳውቅ", clear_data: "ውሂብ አጽዳ",
+      export: "ምትኬ ላክ", import: "ምትኬ አምጣ", language: "ቋንቋ", reset: "ወደ ነባሪ መልስ",
+      nav_home: "መነሻ", nav_students: "ተማሪዎች", nav_analytics: "ስታቲስቲክስ", nav_notes: "ማስታወሻ", nav_calendar: "ቀን መቁጠሪያ",
+      nav_resources: "መረጃ", nav_chat: "ውይይት", nav_settings: "ቅንብር", nav_save: "አስቀምጥ",
       invalid_password: "❌ የተሳሳተ የይለፍ ቃል",
       invalid_email: "❌ ትክክለኛ ኢሜይል ያስገቡ",
       teacher_mode_on: "✅ የመምህር ሁነታ ነቅቷል",
@@ -933,7 +872,7 @@
       row.insertCell(3).textContent = s.sex||''; row.insertCell(4).textContent = s.grade||'';
       row.insertCell(5).textContent = scores[0]; row.insertCell(6).textContent = scores[1]; row.insertCell(7).textContent = scores[2];
       row.insertCell(8).textContent = sum; row.insertCell(9).textContent = avg;
-      if (isTeacher) { const actions = row.insertCell(10); actions.innerHTML = `<button onclick="startEdit('${s.id}')">✏️</button><button onclick="deleteStudent('${s.id}')">❌</button>`; }
+      if (isTeacher) { const actions = row.insertCell(10); actions.innerHTML = `<button onclick="window.startEdit('${s.id}')">✏️</button><button onclick="window.deleteStudent('${s.id}')">❌</button>`; }
     });
   }
 
@@ -1037,6 +976,36 @@
     } catch(e) {}
   }
 
+  // Expose all functions to window BEFORE DOM loads
+  window.loginAsTeacher = loginAsTeacher;
+  window.loginAsStudent = loginAsStudent;
+  window.addOrUpdateStudent = addOrUpdateStudent;
+  window.startEdit = startEdit;
+  window.cancelEdit = cancelEdit;
+  window.deleteStudent = deleteStudent;
+  window.addNote = addNote;
+  window.addEvent = addEvent;
+  window.addRes = addRes;
+  window.send = send;
+  window.validateName = validateName;
+  window.validateNum = validateNum;
+  window.validateScore = validateScore;
+  window.go = go;
+  window.setTheme = setTheme;
+  window.fontSize = fontSize;
+  window.toggleAutoSave = toggleAutoSave;
+  window.notify = notify;
+  window.clearAll = clearAll;
+  window.saveAllData = saveAllData;
+  window.exportFile = exportFile;
+  window.importFile = importFile;
+  window.renderAll = renderAll;
+  window.resetDefaults = resetDefaults;
+  window.changeLanguage = changeLanguage;
+  window.toggleLike = toggleLike;
+  window.showConnectionDetails = showConnectionDetails;
+  window.isTeacher = isTeacher; // expose read-only
+
   window.addEventListener('load', () => {
     const savedLang = localStorage.getItem('app_lang')||'en'; document.getElementById('languageSelect').value = savedLang; applyLanguage(savedLang);
     setTheme(localStorage.getItem('theme')||'dark'); const savedFont = localStorage.getItem('fontSize'); if(savedFont) fontSize(parseInt(savedFont));
@@ -1049,6 +1018,7 @@
     const storedTeacher = localStorage.getItem('isTeacher');
     if (storedTeacher !== null) {
       isTeacher = storedTeacher === 'true';
+      window.isTeacher = isTeacher;
       if (isTeacher) { document.body.classList.add('teacher-mode'); document.getElementById('languageSelect').disabled = false; document.getElementById('importFileInput').disabled = false; }
       else { document.getElementById('languageSelect').disabled = true; document.getElementById('importFileInput').disabled = true; }
       document.getElementById('bottomNav').classList.remove('hidden');
@@ -1058,15 +1028,6 @@
   });
 
   setInterval(()=>{ if(autoSave && isTeacher) saveAllData(); }, 10000);
-
-  window.loginAsTeacher=loginAsTeacher; window.loginAsStudent=loginAsStudent;
-  window.addOrUpdateStudent=addOrUpdateStudent; window.startEdit=startEdit; window.cancelEdit=cancelEdit; window.deleteStudent=deleteStudent;
-  window.addNote=addNote; window.addEvent=addEvent; window.addRes=addRes; window.send=send;
-  window.validateName=validateName; window.validateNum=validateNum; window.validateScore=validateScore;
-  window.go=go; window.setTheme=setTheme; window.fontSize=fontSize; window.toggleAutoSave=toggleAutoSave; window.notify=notify;
-  window.clearAll=clearAll; window.saveAllData=saveAllData; window.exportFile=exportFile; window.importFile=importFile; window.renderAll=renderAll;
-  window.resetDefaults=resetDefaults; window.changeLanguage=changeLanguage;
-  window.toggleLike=toggleLike; window.showConnectionDetails=showConnectionDetails;
 </script>
 </body>
 </html>
