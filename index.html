@@ -112,6 +112,10 @@
       letter-spacing: 1px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       border-bottom: 3px solid #d49c6c;
+      display: none; /* hidden until login */
+    }
+    body.logged-in header {
+      display: block;
     }
     body.light header {
       background: linear-gradient(145deg, #8b5e3c, #5e3a1c);
@@ -133,6 +137,10 @@
       border: 1px solid rgba(255,255,255,0.2);
       cursor: pointer;
       transition: all 0.2s;
+      display: none; /* hidden until login */
+    }
+    body.logged-in .connection-status {
+      display: block;
     }
     .connection-status.connected {
       background: rgba(46, 139, 87, 0.8);
@@ -431,14 +439,10 @@
   </style>
 </head>
 <body class="dark">
-
-<!-- Connection status indicator -->
-<div id="connectionStatus" class="connection-status" onclick="showConnectionDetails()">🔄 Firebase: Checking...</div>
-
-<!-- Global banners -->
-<div id="globalMessage" class="error-banner"></div>
-
+<!-- Header and connection status hidden initially, shown after login via body.logged-in -->
 <header data-i18n="app_title">📚 Teacher Hub</header>
+<div id="connectionStatus" class="connection-status" onclick="showConnectionDetails()">🔄 Firebase: Checking...</div>
+<div id="globalMessage" class="error-banner"></div>
 
 <!-- ========== LOGIN ========== -->
 <div class="container active" id="login">
@@ -941,19 +945,33 @@
 
   function loginAsTeacher() {
     if (document.getElementById('teacherPassword').value === TEACHER_PASSWORD) {
-      isTeacher = true; document.body.classList.add('teacher-mode'); localStorage.setItem('isTeacher', 'true');
-      document.getElementById('languageSelect').disabled = false; document.getElementById('importFileInput').disabled = false;
+      isTeacher = true; window.isTeacher = true;
+      document.body.classList.add('teacher-mode', 'logged-in');
+      localStorage.setItem('isTeacher', 'true');
+      document.getElementById('languageSelect').disabled = false;
+      document.getElementById('importFileInput').disabled = false;
       document.getElementById('bottomNav').classList.remove('hidden');
-      go('home'); showMessage(getTranslation('teacher_mode_on'), 'success');
-    } else { document.getElementById('loginMsg').innerText = getTranslation('invalid_password'); }
+      go('home');
+      showMessage(getTranslation('teacher_mode_on'), 'success');
+    } else {
+      document.getElementById('loginMsg').innerText = getTranslation('invalid_password');
+    }
   }
   function loginAsStudent() {
     const email = document.getElementById('studentEmail').value.trim();
-    if (!validateEmail(email)) { document.getElementById('loginMsg').innerText = getTranslation('invalid_email'); return; }
-    isTeacher = false; document.body.classList.remove('teacher-mode'); localStorage.setItem('isTeacher', 'false');
-    document.getElementById('languageSelect').disabled = true; document.getElementById('importFileInput').disabled = true;
+    if (!validateEmail(email)) {
+      document.getElementById('loginMsg').innerText = getTranslation('invalid_email');
+      return;
+    }
+    isTeacher = false; window.isTeacher = false;
+    document.body.classList.remove('teacher-mode');
+    document.body.classList.add('logged-in');
+    localStorage.setItem('isTeacher', 'false');
+    document.getElementById('languageSelect').disabled = true;
+    document.getElementById('importFileInput').disabled = true;
     document.getElementById('bottomNav').classList.remove('hidden');
-    go('home'); showMessage(getTranslation('student_mode_on'), 'info');
+    go('home');
+    showMessage(getTranslation('student_mode_on'), 'info');
   }
 
   async function initializeCloudData() {
@@ -1004,26 +1022,63 @@
   window.changeLanguage = changeLanguage;
   window.toggleLike = toggleLike;
   window.showConnectionDetails = showConnectionDetails;
-  window.isTeacher = isTeacher; // expose read-only
+  window.isTeacher = isTeacher;
 
   window.addEventListener('load', () => {
-    const savedLang = localStorage.getItem('app_lang')||'en'; document.getElementById('languageSelect').value = savedLang; applyLanguage(savedLang);
-    setTheme(localStorage.getItem('theme')||'dark'); const savedFont = localStorage.getItem('fontSize'); if(savedFont) fontSize(parseInt(savedFont));
+    const savedLang = localStorage.getItem('app_lang')||'en';
+    document.getElementById('languageSelect').value = savedLang;
+    applyLanguage(savedLang);
+    setTheme(localStorage.getItem('theme')||'dark');
+    const savedFont = localStorage.getItem('fontSize');
+    if(savedFont) fontSize(parseInt(savedFont));
+    
     function onFirebaseReady(event) {
-      if (event.detail?.success) { firestoreReady=true; firebaseConnected=true; updateConnectionStatus(true); setupRealtimeListeners(); initializeCloudData(); }
-      else { firestoreReady=false; firebaseConnected=false; updateConnectionStatus(event.detail?.offline ? 'offline' : false); loadFromLocalStorage(); renderAllFromCache(); showMessage(getTranslation('firebase_failed'), 'error'); }
+      if (event.detail?.success) {
+        firestoreReady=true; firebaseConnected=true;
+        updateConnectionStatus(true);
+        setupRealtimeListeners();
+        initializeCloudData();
+      } else {
+        firestoreReady=false; firebaseConnected=false;
+        updateConnectionStatus(event.detail?.offline ? 'offline' : false);
+        loadFromLocalStorage();
+        renderAllFromCache();
+        showMessage(getTranslation('firebase_failed'), 'error');
+      }
     }
-    if (window.firestoreReady !== undefined) { if (window.firestoreReady) { firestoreReady=true; firebaseConnected=true; setupRealtimeListeners(); initializeCloudData(); } else { loadFromLocalStorage(); renderAllFromCache(); } }
-    else window.addEventListener('firebase-ready', onFirebaseReady);
+    if (window.firestoreReady !== undefined) {
+      if (window.firestoreReady) {
+        firestoreReady=true; firebaseConnected=true;
+        setupRealtimeListeners();
+        initializeCloudData();
+      } else {
+        loadFromLocalStorage();
+        renderAllFromCache();
+      }
+    } else {
+      window.addEventListener('firebase-ready', onFirebaseReady);
+    }
+    
     const storedTeacher = localStorage.getItem('isTeacher');
     if (storedTeacher !== null) {
       isTeacher = storedTeacher === 'true';
       window.isTeacher = isTeacher;
-      if (isTeacher) { document.body.classList.add('teacher-mode'); document.getElementById('languageSelect').disabled = false; document.getElementById('importFileInput').disabled = false; }
-      else { document.getElementById('languageSelect').disabled = true; document.getElementById('importFileInput').disabled = true; }
+      if (isTeacher) {
+        document.body.classList.add('teacher-mode', 'logged-in');
+        document.getElementById('languageSelect').disabled = false;
+        document.getElementById('importFileInput').disabled = false;
+      } else {
+        document.body.classList.add('logged-in');
+        document.getElementById('languageSelect').disabled = true;
+        document.getElementById('importFileInput').disabled = true;
+      }
       document.getElementById('bottomNav').classList.remove('hidden');
       go('home');
-    } else { go('login'); document.getElementById('bottomNav').classList.add('hidden'); }
+    } else {
+      go('login');
+      document.getElementById('bottomNav').classList.add('hidden');
+      // ensure header and status are hidden (body not logged-in)
+    }
     document.getElementById('importFileInput2').addEventListener('change', importFile);
   });
 
