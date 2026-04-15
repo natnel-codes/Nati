@@ -4,77 +4,76 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>📚 Teacher Hub · Professional</title>
-  <!-- Firebase Module (graceful offline) -->
+  <!-- Firebase -->
   <script type="module">
-    // Predefine connection status handler
-    window.updateConnectionStatus = function(connected, msg = '') {
-      const el = document.getElementById('connectionStatus');
-      if (!el) return;
-      if (connected === 'offline') {
-        el.textContent = '🟡 Offline Mode';
-        el.className = 'connection-status offline';
-      } else if (connected === true) {
-        el.textContent = '🟢 Firebase Connected';
-        el.className = 'connection-status connected';
-      } else {
-        el.textContent = '🔴 Firebase Failed';
-        el.className = 'connection-status failed';
-      }
-      console.log(`📡 Status: ${connected}`, msg || '');
+    // 🔧 PRODUCTION FIX: Safe async initialization, no top-level await, retry logic, robust error handling
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAd-MV21DJmV1iqNDyc09zV6gTjvFv9SFU",
+      authDomain: "teacher-hub-43.firebaseapp.com",
+      projectId: "teacher-hub-43",
+      storageBucket: "teacher-hub-43.firebasestorage.app",
+      messagingSenderId: "656218363232",
+      appId: "1:656218363232:web:e6995a110c23ffa4f7ba05"
     };
 
-    const isFileProtocol = window.location.protocol === 'file:';
-    
-    if (isFileProtocol) {
-      console.warn('📁 file:// detected. Firebase disabled, using localStorage.');
-      window.firestoreReady = false;
-      window.firebaseConnected = false;
-      window.db = null;
-      window.firestoreModules = null;
-      window.updateConnectionStatus('offline');
-      window.dispatchEvent(new CustomEvent('firebase-ready', { detail: { success: false, offline: true } }));
-    } else {
+    // Retry configuration
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000;
+    let retryCount = 0;
+
+    async function initializeFirebase() {
       try {
-        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-        const { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch, enableIndexedDbPersistence } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-
-        const firebaseConfig = {
-          apiKey: "AIzaSyAd-MV21DJmV1iqNDyc09zV6gTjvFv9SFU",
-          authDomain: "teacher-hub-43.firebaseapp.com",
-          projectId: "teacher-hub-43",
-          storageBucket: "teacher-hub-43.firebasestorage.app",
-          messagingSenderId: "656218363232",
-          appId: "1:656218363232:web:e6995a110c23ffa4f7ba05"
-        };
-
-        console.log('🔥 Initializing Firebase...');
+        console.log(`🔥 Firebase init attempt ${retryCount + 1}/${MAX_RETRIES}`);
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
+        // Enable offline persistence (non-blocking)
         try {
           await enableIndexedDbPersistence(db);
           console.log('✅ Offline persistence enabled');
         } catch (err) {
-          if (err.code === 'failed-precondition') console.warn('⚠️ Multiple tabs open');
-          else if (err.code === 'unimplemented') console.warn('⚠️ Browser lacks persistence');
+          if (err.code === 'failed-precondition') {
+            console.warn('⚠️ Multiple tabs open, persistence can only be enabled in one tab.');
+          } else if (err.code === 'unimplemented') {
+            console.warn('⚠️ Browser does not support IndexedDB persistence');
+          } else {
+            console.error('❌ Persistence error:', err);
+          }
         }
         
         window.db = db;
+        window.firestoreModules = { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch };
         window.firestoreReady = true;
         window.firebaseConnected = true;
-        window.firestoreModules = { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, updateDoc, writeBatch };
-        console.log('✅ Firebase ready');
+        window.firebaseError = null;
         
-        window.updateConnectionStatus(true);
+        console.log('✅ Firebase ready');
         window.dispatchEvent(new CustomEvent('firebase-ready', { detail: { success: true } }));
+        if (typeof updateConnectionStatus === 'function') updateConnectionStatus(true);
+        retryCount = 0; // reset on success
       } catch (error) {
-        console.error('❌ Firebase init error:', error);
+        console.error('❌ Firebase initialization error:', error);
         window.firestoreReady = false;
         window.firebaseConnected = false;
-        window.updateConnectionStatus(false, error.message);
-        window.dispatchEvent(new CustomEvent('firebase-ready', { detail: { success: false, error: error.message } }));
+        window.firebaseError = error.message;
+        
+        if (retryCount < MAX_RETRIES - 1) {
+          retryCount++;
+          console.log(`⏳ Retrying in ${RETRY_DELAY}ms...`);
+          setTimeout(initializeFirebase, RETRY_DELAY * retryCount);
+        } else {
+          console.error('❌ Firebase initialization failed after retries');
+          window.dispatchEvent(new CustomEvent('firebase-ready', { detail: { success: false, error: error.message } }));
+          if (typeof updateConnectionStatus === 'function') updateConnectionStatus(false, error.message);
+        }
       }
     }
+
+    // Start initialization
+    initializeFirebase();
   </script>
   <style>
     /* ========== GLOBAL STYLES – BOLD & FULL WIDTH ========== */
@@ -112,10 +111,6 @@
       letter-spacing: 1px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       border-bottom: 3px solid #d49c6c;
-      display: none; /* hidden until login */
-    }
-    body.logged-in header {
-      display: block;
     }
     body.light header {
       background: linear-gradient(145deg, #8b5e3c, #5e3a1c);
@@ -137,20 +132,12 @@
       border: 1px solid rgba(255,255,255,0.2);
       cursor: pointer;
       transition: all 0.2s;
-      display: none; /* hidden until login */
-    }
-    body.logged-in .connection-status {
-      display: block;
     }
     .connection-status.connected {
       background: rgba(46, 139, 87, 0.8);
     }
     .connection-status.failed {
       background: rgba(220, 53, 69, 0.8);
-    }
-    .connection-status.offline {
-      background: rgba(255, 193, 7, 0.8);
-      color: #000;
     }
     .connection-status:hover {
       opacity: 0.9;
@@ -161,14 +148,9 @@
       min-height: 100vh;
       width: 100%;
       max-width: 100%;
-      animation: fadeIn 0.3s ease;
     }
     .container.active {
       display: block;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0.5; }
-      to { opacity: 1; }
     }
     button {
       background: #c07a3d;
@@ -181,7 +163,7 @@
       font-weight: 800;
       font-size: 1rem;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: all 0.2s ease;
+      transition: all 0.15s;
       border: 1px solid rgba(255,255,240,0.3);
     }
     button:hover {
@@ -204,41 +186,15 @@
       font-weight: 700;
       font-size: 1rem;
       width: auto;
-      transition: all 0.2s;
     }
     body.light input, body.light select {
       background: white;
       color: #111;
       border: 2px solid #b0b0c0;
     }
-    .teacher-only {
-      display: none !important;
-    }
-    body.teacher-mode .teacher-only {
-      display: block !important;
-    }
-    body.teacher-mode .teacher-only-inline {
-      display: inline-block !important;
-    }
-    body:not(.teacher-mode) button:not(#likeButton):not(nav button):not(#chat button):not(#chat input):not(#chat select),
-    body:not(.teacher-mode) input:not(#cname):not(#msg),
-    body:not(.teacher-mode) select:not(#role),
-    body:not(.teacher-mode) .setting-card button,
-    body:not(.teacher-mode) #languageSelect,
-    body:not(.teacher-mode) #importFileInput,
-    body:not(.teacher-mode) #importFileInput2 {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-    body:not(.teacher-mode) #chat input,
-    body:not(.teacher-mode) #chat select,
-    body:not(.teacher-mode) #chat button {
-      opacity: 1 !important;
-      pointer-events: auto !important;
-    }
-    #likeButton {
-      cursor: pointer;
-    }
+    .teacher-only { display: none; }
+    body.teacher-mode .teacher-only { display: block; }
+    body.teacher-mode .teacher-only-inline { display: inline-block; }
     nav {
       position: fixed;
       bottom: 0;
@@ -250,10 +206,6 @@
       box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
       padding: 6px 0;
       border-top: 2px solid #b56f2e;
-      transition: transform 0.3s;
-    }
-    nav.hidden {
-      display: none;
     }
     body.light nav {
       background: #e2e6f0;
@@ -306,20 +258,10 @@
     body.light th {
       background: #a56e3c;
     }
-    .valid {
-      color: #7ef0a2;
-      font-weight: 900;
-    }
-    .invalid {
-      color: #ff8a8a;
-      font-weight: 900;
-    }
-    body.light .valid {
-      color: #0f7b3a;
-    }
-    body.light .invalid {
-      color: #c00020;
-    }
+    .valid { color: #7ef0a2; font-weight: 900; }
+    .invalid { color: #ff8a8a; font-weight: 900; }
+    body.light .valid { color: #0f7b3a; }
+    body.light .invalid { color: #c00020; }
     .login-box {
       max-width: 450px;
       margin: 60px auto;
@@ -347,10 +289,6 @@
       box-shadow: 0 6px 12px rgba(0,0,0,0.3);
       border-left: 8px solid #b5702e;
       font-weight: 800;
-      transition: transform 0.2s;
-    }
-    .setting-card:hover {
-      transform: translateY(-3px);
     }
     body.light .setting-card {
       background: #f0f4fe;
@@ -369,13 +307,10 @@
       font-weight: 700;
       border: 1px solid #5a4a3a;
       word-break: break-word;
-      transition: all 0.2s;
-      color: #f0e6d2;
     }
     body.light li {
       background: #e9ecf5;
       border: 1px solid #cdb79e;
-      color: #1e1f2a;
     }
     h2 {
       font-weight: 900;
@@ -388,8 +323,13 @@
       color: #5a3a1e;
       border-left-color: #a86f2c;
     }
-    .container {
-      width: 100%;
+    .container { width: 100%; }
+    body:not(.teacher-mode) .setting-card button,
+    body:not(.teacher-mode) #languageSelect,
+    body:not(.teacher-mode) #importFileInput,
+    body:not(.teacher-mode) #importFileInput2 {
+      opacity: 0.6;
+      pointer-events: none;
     }
     .error-banner {
       background: #ff4d4d;
@@ -415,34 +355,14 @@
       min-width: 100px;
       margin-left: 5px;
     }
-    .stats-bar {
-      display: flex;
-      justify-content: flex-end;
-      gap: 20px;
-      margin-bottom: 15px;
-      font-size: 1.2rem;
-    }
-    .like-btn {
-      background: #e74c3c;
-      padding: 8px 18px;
-      border-radius: 40px;
-      cursor: pointer;
-      transition: 0.2s;
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .like-btn.liked {
-      background: #27ae60;
-    }
   </style>
 </head>
 <body class="dark">
-<!-- Header and connection status hidden initially, shown after login via body.logged-in -->
-<header data-i18n="app_title">📚 Teacher Hub</header>
+
 <div id="connectionStatus" class="connection-status" onclick="showConnectionDetails()">🔄 Firebase: Checking...</div>
 <div id="globalMessage" class="error-banner"></div>
+
+<header data-i18n="app_title">📚 Teacher Hub</header>
 
 <!-- ========== LOGIN ========== -->
 <div class="container active" id="login">
@@ -451,27 +371,20 @@
     <p data-i18n="login_instruction" style="margin:20px 0;">👩‍🏫 Teacher: Enter password | 👀 Student: Enter email</p>
     
     <input id="teacherPassword" type="password" placeholder="Password" data-i18n-placeholder="password_placeholder" value="">
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.loginAsTeacher()" style="width:100%;" data-i18n="enter_teacher">👩‍🏫 Enter as Teacher</button>
-    <!-- FIX END -->
+    <button onclick="loginAsTeacher()" style="width:100%;" data-i18n="enter_teacher">👩‍🏫 Enter as Teacher</button>
     
     <p style="margin:20px 0;">or</p>
     
     <input id="studentEmail" type="email" placeholder="student@example.com" data-i18n-placeholder="email_placeholder" value="">
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.loginAsStudent()" style="width:100%; background:#5a5a70;" data-i18n="enter_student">👀 View as Student</button>
-    <!-- FIX END -->
+    <button onclick="loginAsStudent()" style="width:100%; background:#5a5a70;" data-i18n="enter_student">👀 View as Student</button>
     
     <p id="loginMsg" style="margin-top:20px; font-weight:900;"></p>
+    <p style="font-size:13px; margin-top:25px; opacity:0.8;" data-i18n="hint_password">Teacher password: teacher123</p>
   </div>
 </div>
 
 <!-- ========== HOME ========== -->
 <div class="container" id="home">
-  <div class="stats-bar">
-    <span>👁️ Views: <span id="viewCount">0</span></span>
-    <span id="likeButton" class="like-btn" onclick="window.toggleLike()">❤️ <span id="likeCount">0</span></span>
-  </div>
   <h2 data-i18n="dashboard">📋 Dashboard</h2>
   <div style="background: linear-gradient(135deg, #2e5a4c, #1e3f36); padding:35px; border-radius:30px; color:white; text-align:center; font-weight:900; font-size:1.6rem; box-shadow:0 8px 16px rgba(0,0,0,0.4);">
     🎓📊 Class Overview
@@ -492,23 +405,21 @@
 <div class="container" id="students">
   <h2 data-i18n="students">🧑‍🎓 Students</h2>
   <div class="teacher-only" style="background:#1e1e28; padding:22px; border-radius:30px; margin-bottom:30px; box-shadow:0 6px 12px rgba(0,0,0,0.4);">
-    <input id="name" placeholder="Name" data-i18n-placeholder="name_placeholder" oninput="window.validateName()"> 
+    <input id="name" placeholder="Name" data-i18n-placeholder="name_placeholder" oninput="validateName()"> 
     <span id="nameMsg" class="validation-msg"></span>
-    <input id="age" placeholder="Age" data-i18n-placeholder="age_placeholder" oninput="window.validateNum('age','ageMsg')"> 
+    <input id="age" placeholder="Age" data-i18n-placeholder="age_placeholder" oninput="validateNum('age','ageMsg')"> 
     <span id="ageMsg" class="validation-msg"></span>
     <select id="sex"><option>M</option><option>F</option></select>
-    <input id="grade" placeholder="Grade" data-i18n-placeholder="grade_placeholder" oninput="window.validateNum('grade','gradeMsg')"> 
+    <input id="grade" placeholder="Grade" data-i18n-placeholder="grade_placeholder" oninput="validateNum('grade','gradeMsg')"> 
     <span id="gradeMsg" class="validation-msg"></span>
-    <input id="s1" placeholder="S1" style="width:85px;" oninput="window.validateScore('s1','m1')"> 
+    <input id="s1" placeholder="S1" style="width:85px;" oninput="validateScore('s1','m1')"> 
     <span id="m1" class="validation-msg"></span>
-    <input id="s2" placeholder="S2" style="width:85px;" oninput="window.validateScore('s2','m2')"> 
+    <input id="s2" placeholder="S2" style="width:85px;" oninput="validateScore('s2','m2')"> 
     <span id="m2" class="validation-msg"></span>
-    <input id="s3" placeholder="S3" style="width:85px;" oninput="window.validateScore('s3','m3')"> 
+    <input id="s3" placeholder="S3" style="width:85px;" oninput="validateScore('s3','m3')"> 
     <span id="m3" class="validation-msg"></span>
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.addOrUpdateStudent()" id="addUpdateBtn" data-i18n="add_student">➕ Add Student</button>
-    <button onclick="window.cancelEdit()" id="cancelEditBtn" style="display:none;" data-i18n="cancel">❌ Cancel</button>
-    <!-- FIX END -->
+    <button onclick="addOrUpdateStudent()" id="addUpdateBtn" data-i18n="add_student">➕ Add Student</button>
+    <button onclick="cancelEdit()" id="cancelEditBtn" style="display:none;" data-i18n="cancel">❌ Cancel</button>
   </div>
   <div style="overflow-x:auto; width:100%;">
     <table id="studentTable">
@@ -532,9 +443,7 @@
   <h2 data-i18n="notes">📝 Notes</h2>
   <div class="teacher-only" style="margin-bottom:30px;">
     <input id="note" placeholder="Write a note..." data-i18n-placeholder="note_placeholder" style="width:70%;">
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.addNote()" data-i18n="add_note">➕ Add Note</button>
-    <!-- FIX END -->
+    <button onclick="addNote()" data-i18n="add_note">➕ Add Note</button>
   </div>
   <ul id="notesList"></ul>
 </div>
@@ -545,9 +454,7 @@
   <div class="teacher-only" style="margin-bottom:30px;">
     <input id="event" placeholder="Event name" data-i18n-placeholder="event_placeholder">
     <input type="date" id="date">
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.addEvent()" data-i18n="add_event">➕ Add Event</button>
-    <!-- FIX END -->
+    <button onclick="addEvent()" data-i18n="add_event">➕ Add Event</button>
   </div>
   <ul id="events"></ul>
 </div>
@@ -557,9 +464,7 @@
   <h2 data-i18n="resources">🔗 Resources</h2>
   <div class="teacher-only" style="margin-bottom:30px;">
     <input id="res" placeholder="Paste link or text" data-i18n-placeholder="resource_placeholder" style="width:70%;">
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.addRes()" data-i18n="add_resource">➕ Add</button>
-    <!-- FIX END -->
+    <button onclick="addRes()" data-i18n="add_resource">➕ Add</button>
   </div>
   <ul id="resList"></ul>
 </div>
@@ -571,9 +476,7 @@
     <select id="role"><option>Teacher</option><option>Student</option></select>
     <input id="cname" placeholder="Your name" data-i18n-placeholder="chat_name">
     <input id="msg" placeholder="Message" data-i18n-placeholder="chat_message" style="flex:2;">
-    <!-- FIX START: Ensure onclick uses window. function -->
-    <button onclick="window.send()" data-i18n="send">Send</button>
-    <!-- FIX END -->
+    <button onclick="send()" data-i18n="send">Send</button>
   </div>
   <ul id="chatBox" style="max-height:400px; overflow-y:auto;"></ul>
 </div>
@@ -583,37 +486,37 @@
   <h2 data-i18n="settings">⚙️ Settings</h2>
   <div class="settings-grid">
     <div class="setting-card"><label data-i18n="theme">Theme</label><br>
-      <button onclick="if(window.isTeacher) window.setTheme('dark')">🌙 Dark</button>
-      <button onclick="if(window.isTeacher) window.setTheme('light')">☀️ Light</button>
+      <button onclick="if(isTeacher) setTheme('dark')">🌙 Dark</button>
+      <button onclick="if(isTeacher) setTheme('light')">☀️ Light</button>
     </div>
     <div class="setting-card"><label data-i18n="font_size">Font Size</label><br>
-      <button onclick="if(window.isTeacher) window.fontSize(14)">S</button>
-      <button onclick="if(window.isTeacher) window.fontSize(18)">M</button>
-      <button onclick="if(window.isTeacher) window.fontSize(22)">L</button>
+      <button onclick="if(isTeacher) fontSize(14)">S</button>
+      <button onclick="if(isTeacher) fontSize(18)">M</button>
+      <button onclick="if(isTeacher) fontSize(22)">L</button>
     </div>
     <div class="setting-card"><label data-i18n="auto_save">Auto Save</label><br>
-      <button onclick="if(window.isTeacher) window.toggleAutoSave()" id="autoSaveBtn">Off</button>
+      <button onclick="if(isTeacher) toggleAutoSave()" id="autoSaveBtn">Off</button>
     </div>
     <div class="setting-card"><label data-i18n="notify">Notify</label><br>
-      <button onclick="if(window.isTeacher) window.notify()">🔔 Test</button>
+      <button onclick="if(isTeacher) notify()">🔔 Test</button>
     </div>
     <div class="setting-card"><label data-i18n="clear_data">Clear Data</label><br>
-      <button onclick="if(window.isTeacher) window.clearAll()">🧹 Clear All</button>
+      <button onclick="if(isTeacher) clearAll()">🧹 Clear All</button>
     </div>
     <div class="setting-card"><label data-i18n="export">Export Backup</label><br>
-      <button onclick="if(window.isTeacher) window.exportFile()">📤 Export</button>
+      <button onclick="if(isTeacher) exportFile()">📤 Export</button>
     </div>
     <div class="setting-card"><label data-i18n="import">Import Backup</label><br>
-      <input type="file" id="importFileInput" accept=".json" onchange="if(window.isTeacher) window.importFile(event)" disabled>
+      <input type="file" id="importFileInput" accept=".json" onchange="if(isTeacher) importFile(event)" disabled>
     </div>
     <div class="setting-card"><label data-i18n="language">Language</label><br>
-      <select id="languageSelect" onchange="if(window.isTeacher) window.changeLanguage(this.value)" disabled>
+      <select id="languageSelect" onchange="if(isTeacher) changeLanguage(this.value)" disabled>
         <option value="en">English</option>
         <option value="am">አማርኛ</option>
       </select>
     </div>
     <div class="setting-card"><label data-i18n="reset">Reset Defaults</label><br>
-      <button onclick="if(window.isTeacher) window.resetDefaults()">⟲ Reset</button>
+      <button onclick="if(isTeacher) resetDefaults()">⟲ Reset</button>
     </div>
   </div>
 </div>
@@ -623,513 +526,896 @@
   <h2 data-i18n="backup">💽 Backup & Sync</h2>
   <div style="background:#1e1e28; padding:30px; border-radius:30px;">
     <p style="font-size:1.2rem; margin-bottom:20px; font-weight:800;">Data auto-syncs to cloud. Use export/import for local backup.</p>
-    <button onclick="if(window.isTeacher) window.exportFile()" style="font-size:1.3rem;">📤 Export All Data</button>
-    <button onclick="if(window.isTeacher) document.getElementById('importFileInput2').click()" style="font-size:1.3rem;">📥 Import Backup</button>
-    <input type="file" id="importFileInput2" accept=".json" style="display:none;" onchange="if(window.isTeacher) window.importFile(event)">
-    <button onclick="if(window.isTeacher) window.saveAllData()" style="font-size:1.3rem;">💾 Force Save Now</button>
-    <button onclick="window.renderAll()" style="font-size:1.3rem;">🔄 Reload App</button>
+    <button onclick="if(isTeacher) exportFile()" style="font-size:1.3rem;">📤 Export All Data</button>
+    <button onclick="if(isTeacher) document.getElementById('importFileInput2').click()" style="font-size:1.3rem;">📥 Import Backup</button>
+    <input type="file" id="importFileInput2" accept=".json" style="display:none;" onchange="if(isTeacher) importFile(event)">
+    <button onclick="if(isTeacher) saveAllData()" style="font-size:1.3rem;">💾 Force Save Now</button>
+    <button onclick="renderAll()" style="font-size:1.3rem;">🔄 Reload App</button>
   </div>
 </div>
 
-<!-- FIX START: Ensure navigation buttons use window.go -->
-<nav id="bottomNav" class="hidden">
-  <button onclick="window.go('home')">🏠 <span data-i18n="nav_home">Home</span></button>
-  <button onclick="window.go('students')">👥 <span data-i18n="nav_students">Students</span></button>
-  <button onclick="window.go('analytics')">📊 <span data-i18n="nav_analytics">Stats</span></button>
-  <button onclick="window.go('notes')">📝 <span data-i18n="nav_notes">Notes</span></button>
-  <button onclick="window.go('calendar')">📅 <span data-i18n="nav_calendar">Cal</span></button>
-  <button onclick="window.go('resources')">🔗 <span data-i18n="nav_resources">Res</span></button>
-  <button onclick="window.go('chat')">💬 <span data-i18n="nav_chat">Chat</span></button>
-  <button onclick="window.go('settings')">⚙️ <span data-i18n="nav_settings">Set</span></button>
-  <button onclick="window.go('saving')">💽 <span data-i18n="nav_save">Save</span></button>
+<nav>
+  <button onclick="go('home')">🏠 <span data-i18n="nav_home">Home</span></button>
+  <button onclick="go('students')">👥 <span data-i18n="nav_students">Students</span></button>
+  <button onclick="go('analytics')">📊 <span data-i18n="nav_analytics">Stats</span></button>
+  <button onclick="go('notes')">📝 <span data-i18n="nav_notes">Notes</span></button>
+  <button onclick="go('calendar')">📅 <span data-i18n="nav_calendar">Cal</span></button>
+  <button onclick="go('resources')">🔗 <span data-i18n="nav_resources">Res</span></button>
+  <button onclick="go('chat')">💬 <span data-i18n="nav_chat">Chat</span></button>
+  <button onclick="go('settings')">⚙️ <span data-i18n="nav_settings">Set</span></button>
+  <button onclick="go('saving')">💽 <span data-i18n="nav_save">Save</span></button>
 </nav>
-<!-- FIX END -->
 
 <script>
-  // ========== GLOBAL FUNCTIONS & FIXES ==========
-  // FIX START: Ensure all functions are globally accessible and use DOMContentLoaded for safety
-  document.addEventListener("DOMContentLoaded", function() {
-    // Expose all functions to window (redundant but ensures they exist before any onclick fires)
-    window.loginAsTeacher = loginAsTeacher;
-    window.loginAsStudent = loginAsStudent;
-    window.addOrUpdateStudent = addOrUpdateStudent;
+  (function() {
+    "use strict";
+
+    // ---------- GLOBAL ERROR HANDLING ----------
+    window.onerror = function(msg, url, line, col, error) {
+      console.error('🚨 Global error:', { msg, url, line, col, error });
+      if (window.showMessage) showMessage('Unexpected error occurred. Check console.', 'error');
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+      console.error('🚨 Unhandled promise rejection:', event.reason);
+      if (window.showMessage) showMessage('Async operation failed.', 'error');
+      event.preventDefault();
+    });
+
+    // ---------- TRANSLATIONS ----------
+    const translations = {
+      en: {
+        app_title: "📚 Teacher Hub",
+        login_title: "🔐 Welcome",
+        login_instruction: "👩‍🏫 Teacher: Enter password | 👀 Student: Enter email",
+        hint_password: "Teacher password: teacher123",
+        email_placeholder: "student@example.com",
+        password_placeholder: "Password",
+        enter_teacher: "👩‍🏫 Enter as Teacher",
+        enter_student: "👀 View as Student",
+        dashboard: "📋 Dashboard",
+        students: "🧑‍🎓 Students",
+        analytics: "📊 Analytics",
+        notes: "📝 Notes",
+        calendar: "📅 Calendar",
+        resources: "🔗 Resources",
+        chat: "💬 Chat",
+        settings: "⚙️ Settings",
+        backup: "💽 Backup & Sync",
+        th_name: "Name", th_age: "Age", th_sex: "Sex", th_grade: "Grade", th_total: "Total", th_avg: "Avg", th_actions: "Actions",
+        add_student: "➕ Add Student", cancel: "❌ Cancel", update_student: "✏️ Update Student",
+        name_placeholder: "Name", age_placeholder: "Age", grade_placeholder: "Grade",
+        total_score: "Total Score", average_score: "Class Average",
+        note_placeholder: "Write a note...", add_note: "➕ Add Note",
+        event_placeholder: "Event name", add_event: "➕ Add Event",
+        resource_placeholder: "Paste link or text", add_resource: "➕ Add",
+        chat_name: "Your name", chat_message: "Message", send: "Send",
+        theme: "Theme", font_size: "Font Size", auto_save: "Auto Save", notify: "Notify", clear_data: "Clear Data",
+        export: "Export Backup", import: "Import Backup", language: "Language", reset: "Reset Defaults",
+        nav_home: "Home", nav_students: "Students", nav_analytics: "Stats", nav_notes: "Notes", nav_calendar: "Cal",
+        nav_resources: "Res", nav_chat: "Chat", nav_settings: "Set", nav_save: "Save",
+        invalid_password: "❌ Incorrect password",
+        invalid_email: "❌ Please enter a valid email address",
+        teacher_mode_on: "✅ Teacher mode activated",
+        student_mode_on: "👀 View-only mode (student)",
+        fill_all_fields: "Please fill all fields correctly.",
+        event_required: "Both event name and date are required.",
+        import_success: "✅ Data imported successfully!",
+        export_success: "📤 Backup exported.",
+        clear_confirm: "Clear all data? This cannot be undone.",
+        validation_name: "✗ letters only",
+        validation_number: "✗ numbers only",
+        validation_score: "✗ 0-100 only",
+        no_students: "No students yet. Add one!",
+        no_notes: "No notes yet.",
+        firebase_failed: "Firebase connection failed. Using local mode.",
+        firebase_connected: "Firebase connected",
+        firebase_disconnected: "Firebase disconnected"
+      },
+      am: {
+        app_title: "📚 የመምህር ማዕከል",
+        login_title: "🔐 እንኳን ደህና መጡ",
+        login_instruction: "👩‍🏫 መምህር: የይለፍ ቃል ያስገቡ | 👀 ተማሪ: ኢሜይል ያስገቡ",
+        hint_password: "የመምህር ይለፍ ቃል: teacher123",
+        email_placeholder: "ተማሪ@ምሳሌ.com",
+        password_placeholder: "የይለፍ ቃል",
+        enter_teacher: "👩‍🏫 እንደ መምህር ግባ",
+        enter_student: "👀 እንደ ተማሪ ተመልከት",
+        dashboard: "📋 ዳሽቦርድ",
+        students: "🧑‍🎓 ተማሪዎች",
+        analytics: "📊 ትንታኔ",
+        notes: "📝 ማስታወሻዎች",
+        calendar: "📅 የቀን መቁጠሪያ",
+        resources: "🔗 መረጃዎች",
+        chat: "💬 ውይይት",
+        settings: "⚙️ ቅንብሮች",
+        backup: "💽 ምትኬ እና ማመሳሰል",
+        th_name: "ስም", th_age: "ዕድሜ", th_sex: "ፆታ", th_grade: "ክፍል", th_total: "ድምር", th_avg: "አማካይ", th_actions: "ተግባራት",
+        add_student: "➕ ተማሪ ጨምር", cancel: "❌ ሰርዝ", update_student: "✏️ ተማሪ አሻሽል",
+        name_placeholder: "ስም", age_placeholder: "ዕድሜ", grade_placeholder: "ክፍል",
+        total_score: "አጠቃላይ ውጤት", average_score: "የክፍል አማካይ",
+        note_placeholder: "ማስታወሻ ጻፍ...", add_note: "➕ አክል",
+        event_placeholder: "የክስተት ስም", add_event: "➕ ክስተት አክል",
+        resource_placeholder: "አገናኝ ወይም ጽሑፍ ለጥፍ", add_resource: "➕ አክል",
+        chat_name: "ስምዎ", chat_message: "መልእክት", send: "ላክ",
+        theme: "ገጽታ", font_size: "የቅርጸ-ቁምፊ መጠን", auto_save: "ራስ-ሰር አስቀምጥ", notify: "አሳውቅ", clear_data: "ውሂብ አጽዳ",
+        export: "ምትኬ ላክ", import: "ምትኬ አምጣ", language: "ቋንቋ", reset: "ወደ ነባሪ መልስ",
+        nav_home: "መነሻ", nav_students: "ተማሪዎች", nav_analytics: "ስታቲስቲክስ", nav_notes: "ማስታወሻ", nav_calendar: "ቀን መቁጠሪያ",
+        nav_resources: "መረጃ", nav_chat: "ውይይት", nav_settings: "ቅንብር", nav_save: "አስቀምጥ",
+        invalid_password: "❌ የተሳሳተ የይለፍ ቃል",
+        invalid_email: "❌ ትክክለኛ ኢሜይል ያስገቡ",
+        teacher_mode_on: "✅ የመምህር ሁነታ ነቅቷል",
+        student_mode_on: "👀 ተመልካች ብቻ",
+        fill_all_fields: "እባክዎ ሁሉንም መስኮች በትክክል ይሙሉ።",
+        event_required: "ሁለቱም የክስተት ስም እና ቀን ያስፈልጋሉ።",
+        import_success: "✅ ውሂብ በተሳካ ሁኔታ ገብቷል!",
+        export_success: "📤 ምትኬ ተልኳል።",
+        clear_confirm: "ሁሉንም ውሂብ ማጽዳት? ይህ ሊቀለበስ አይችልም።",
+        validation_name: "✗ ፊደላት ብቻ",
+        validation_number: "✗ ቁጥሮች ብቻ",
+        validation_score: "✗ 0-100 ብቻ",
+        no_students: "እስካሁን ምንም ተማሪዎች የሉም። አክል!",
+        no_notes: "እስካሁን ምንም ማስታወሻ የለም።",
+        firebase_failed: "የFirebase ግንኙነት አልተሳካም። አካባቢያዊ ሁነታን በመጠቀም ላይ።",
+        firebase_connected: "Firebase ተገናኝቷል",
+        firebase_disconnected: "Firebase ተቋርጧል"
+      }
+    };
+
+    let currentLang = 'en';
+    function applyLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[lang]?.[key]) el.textContent = translations[lang][key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (translations[lang]?.[key]) el.placeholder = translations[lang][key];
+      });
+      if (cachedStudents.length) renderStudents(cachedStudents);
+      updateStats(cachedStudents);
+      if (cachedNotes.length) renderNotes(cachedNotes);
+    }
+    function changeLanguage(lang) {
+      if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
+      applyLanguage(lang);
+      localStorage.setItem('app_lang', lang);
+    }
+    function getTranslation(key) {
+      return translations[currentLang]?.[key] || key;
+    }
+
+    // ---------- GLOBALS ----------
+    const TEACHER_PASSWORD = "teacher123";
+    let isTeacher = false;
+    let autoSave = false;
+    let cachedStudents = [];
+    let cachedNotes = [];
+    let cachedEvents = [];
+    let cachedResources = [];
+    let cachedChats = [];
+    let editingId = null;
+    let firestoreReady = false;
+    let firebaseConnected = false;
+    let firebaseErrorMsg = '';
+    let firestoreListenersActive = false;
+
+    // 🔧 Unique ID generator (collision-safe)
+    function generateId(prefix = '') {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 10);
+      return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}_${random}`;
+    }
+
+    // 🔧 Safe Firebase readiness check
+    function isFirebaseReady() {
+      return !!(window.db && window.firestoreModules && firestoreReady);
+    }
+
+    function getFirestoreModules() {
+      return window.firestoreModules || null;
+    }
+    
+    function colRef(name) {
+      if (!isFirebaseReady()) throw new Error('Firestore not initialized');
+      const modules = getFirestoreModules();
+      return modules.collection(window.db, name);
+    }
+
+    // 🔧 Connection status
+    function updateConnectionStatus(connected, errorMsg = '') {
+      firebaseConnected = connected;
+      firebaseErrorMsg = errorMsg;
+      const statusEl = document.getElementById('connectionStatus');
+      if (!statusEl) return;
+      if (connected) {
+        statusEl.textContent = '🟢 ' + getTranslation('firebase_connected');
+        statusEl.className = 'connection-status connected';
+      } else {
+        statusEl.textContent = '🔴 ' + (errorMsg ? 'Firebase Error' : getTranslation('firebase_disconnected'));
+        statusEl.className = 'connection-status failed';
+      }
+    }
+    window.updateConnectionStatus = updateConnectionStatus;
+
+    function showConnectionDetails() {
+      if (firebaseConnected) {
+        showMessage('✅ Firebase is connected and syncing data.', 'success');
+      } else {
+        showMessage(`❌ Firebase failed: ${firebaseErrorMsg || 'Unknown error'}`, 'error');
+      }
+    }
+    window.showConnectionDetails = showConnectionDetails;
+
+    // Message display
+    function showMessage(msg, type = 'info') {
+      const banner = document.getElementById('globalMessage');
+      if (!banner) return;
+      banner.textContent = msg;
+      banner.style.display = 'block';
+      banner.style.background = type === 'error' ? '#ff4d4d' : (type === 'success' ? '#2e8b57' : '#3a6ea5');
+      setTimeout(() => { if (banner) banner.style.display = 'none'; }, 5000);
+    }
+    window.showMessage = showMessage;
+
+    // ---------- FIREBASE REALTIME LISTENERS (with safety) ----------
+    function setupRealtimeListeners() {
+      if (firestoreListenersActive) return;
+      if (!isFirebaseReady()) {
+        console.warn('⚠️ Cannot setup listeners: Firestore not ready');
+        updateConnectionStatus(false, 'Firestore not initialized');
+        showMessage('Firebase not available. Running in local mode.', 'error');
+        return;
+      }
+      
+      const modules = getFirestoreModules();
+      const { onSnapshot } = modules;
+      
+      try {
+        onSnapshot(colRef('students'), 
+          (snap) => {
+            const students = []; 
+            snap.forEach(d => students.push({ id: d.id, ...d.data() }));
+            cachedStudents = students;
+            renderStudents(students);
+            updateStats(students);
+            updateConnectionStatus(true);
+          },
+          (err) => {
+            console.error('❌ Students listener error:', err);
+            updateConnectionStatus(false, err.message);
+            showMessage(`Sync error: ${err.message}`, 'error');
+          }
+        );
+        
+        onSnapshot(colRef('notes'), 
+          (snap) => { 
+            const notes = []; 
+            snap.forEach(d => notes.push({ id: d.id, text: d.data().text })); 
+            cachedNotes = notes;
+            renderNotes(notes);
+            renderHomeNotesPreview(notes);
+          },
+          (err) => console.error('Notes listener error:', err)
+        );
+        
+        onSnapshot(colRef('events'), 
+          (snap) => { 
+            const events = []; 
+            snap.forEach(d => events.push({ id: d.id, ...d.data() })); 
+            cachedEvents = events;
+            renderEvents(events); 
+          },
+          (err) => console.error('Events listener error:', err)
+        );
+        
+        onSnapshot(colRef('resources'), 
+          (snap) => { 
+            const res = []; 
+            snap.forEach(d => res.push({ id: d.id, text: d.data().text })); 
+            cachedResources = res;
+            renderResources(res); 
+          },
+          (err) => console.error('Resources listener error:', err)
+        );
+        
+        onSnapshot(colRef('chats'), 
+          (snap) => { 
+            const chats = []; 
+            snap.forEach(d => chats.push({ id: d.id, ...d.data() })); 
+            cachedChats = chats;
+            renderChat(chats); 
+          },
+          (err) => console.error('Chat listener error:', err)
+        );
+        
+        firestoreListenersActive = true;
+        console.log('✅ All Firestore listeners established');
+      } catch(e) {
+        console.error('❌ Failed to setup listeners:', e);
+        updateConnectionStatus(false, e.message);
+        showMessage(`Firebase setup failed: ${e.message}`, 'error');
+      }
+    }
+
+    // ---------- RENDER FUNCTIONS ----------
+    function renderStudents(students) {
+      const tbody = document.getElementById('tableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!students.length) {
+        const row = tbody.insertRow();
+        const cell = row.insertCell(0);
+        cell.colSpan = isTeacher ? 11 : 10;
+        cell.textContent = getTranslation('no_students');
+        cell.style.textAlign = 'center';
+        return;
+      }
+      students.sort((a,b) => (a.createdAt||0) - (b.createdAt||0)).forEach((s,i) => {
+        const scores = s.scores || [0,0,0];
+        const sum = scores.reduce((a,b)=>a+(+b||0),0);
+        const avg = (sum/3).toFixed(1);
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = i+1;
+        row.insertCell(1).textContent = s.name||'';
+        row.insertCell(2).textContent = s.age||'';
+        row.insertCell(3).textContent = s.sex||'';
+        row.insertCell(4).textContent = s.grade||'';
+        row.insertCell(5).textContent = scores[0];
+        row.insertCell(6).textContent = scores[1];
+        row.insertCell(7).textContent = scores[2];
+        row.insertCell(8).textContent = sum;
+        row.insertCell(9).textContent = avg;
+        if (isTeacher) {
+          const actions = row.insertCell(10);
+          actions.innerHTML = `<button onclick="startEdit('${s.id}')">✏️</button><button onclick="deleteStudent('${s.id}')">❌</button>`;
+        }
+      });
+    }
+
+    function renderNotes(notes) {
+      const list = document.getElementById('notesList');
+      if (!list) return;
+      list.innerHTML = notes.length ? notes.map(n => `<li>📝 ${n.text}</li>`).join('') : `<li>${getTranslation('no_notes')}</li>`;
+    }
+    function renderHomeNotesPreview(notes) {
+      const preview = document.getElementById('homeNotesPreview');
+      if (!preview) return;
+      const latest = notes.slice(-3).reverse();
+      preview.innerHTML = latest.length ? latest.map(n => `<li>📝 ${n.text}</li>`).join('') : `<li>${getTranslation('no_notes')}</li>`;
+    }
+    function renderEvents(events) {
+      const list = document.getElementById('events');
+      if (!list) return;
+      events.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+      list.innerHTML = events.length ? events.map(e => `<li><strong>${e.date}</strong> : ${e.name}</li>`).join('') : '<li>—</li>';
+    }
+    function renderResources(res) {
+      const list = document.getElementById('resList');
+      if (!list) return;
+      list.innerHTML = res.length ? res.map(r => `<li>🔗 ${r.text}</li>`).join('') : '<li>—</li>';
+    }
+    function renderChat(chats) {
+      const box = document.getElementById('chatBox');
+      if (!box) return;
+      box.innerHTML = chats.length ? chats.map(c => `<li><strong>[${c.role}] ${c.name}:</strong> ${c.message}</li>`).join('') : '<li>—</li>';
+    }
+
+    function updateStats(students) {
+      let sum=0, cnt=0; 
+      students.forEach(s=> (s.scores||[]).forEach(v=>{ sum+=+v; cnt++; }));
+      const totalEl = document.getElementById('total');
+      const avgEl = document.getElementById('avg');
+      const homeStudents = document.getElementById('homeStatStudents');
+      const homeAvg = document.getElementById('homeStatAvg');
+      if (totalEl) totalEl.innerText = sum;
+      if (avgEl) avgEl.innerText = cnt?(sum/cnt).toFixed(1):'0';
+      if (homeStudents) homeStudents.innerText = students.length;
+      if (homeAvg) homeAvg.innerText = cnt?(sum/cnt).toFixed(1):'0';
+    }
+
+    // ---------- VALIDATION ----------
+    function validateScore(id, msgId) {
+      const input = document.getElementById(id);
+      const msg = document.getElementById(msgId);
+      if (!input || !msg) return false;
+      const val = input.value;
+      const num = Number(val);
+      const ok = /^\d+$/.test(val) && num >= 0 && num <= 100;
+      msg.innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_score')}</span>`;
+      return ok;
+    }
+    function validateNum(id, msgId) {
+      const input = document.getElementById(id);
+      const msg = document.getElementById(msgId);
+      if (!input || !msg) return false;
+      const val = input.value;
+      const ok = /^\d+$/.test(val) && val !== '';
+      msg.innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_number')}</span>`;
+      return ok;
+    }
+    function validateName() {
+      const input = document.getElementById('name');
+      const msg = document.getElementById('nameMsg');
+      if (!input || !msg) return false;
+      const ok = /^[A-Za-z ]+$/.test(input.value);
+      msg.innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_name')}</span>`;
+      return ok;
+    }
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // ---------- SAFE FIRESTORE OPERATIONS ----------
+    async function safeFirestoreCall(operation, fallback = null) {
+      if (!isFirebaseReady()) {
+        console.warn('⚠️ Firestore not available');
+        showMessage('Firebase unavailable. Changes saved locally only.', 'error');
+        return fallback;
+      }
+      try {
+        return await operation();
+      } catch (error) {
+        console.error('❌ Firestore operation failed:', error);
+        showMessage(`Firebase error: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // ---------- STUDENT CRUD ----------
+    function startEdit(id) {
+      if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
+      const student = cachedStudents.find(s => s.id === id);
+      if (!student) return;
+      editingId = id;
+      const nameInp = document.getElementById('name');
+      const ageInp = document.getElementById('age');
+      const sexSel = document.getElementById('sex');
+      const gradeInp = document.getElementById('grade');
+      const s1 = document.getElementById('s1');
+      const s2 = document.getElementById('s2');
+      const s3 = document.getElementById('s3');
+      if (nameInp) nameInp.value = student.name || '';
+      if (ageInp) ageInp.value = student.age || '';
+      if (sexSel) sexSel.value = student.sex || 'M';
+      if (gradeInp) gradeInp.value = student.grade || '';
+      const scores = student.scores || [0,0,0];
+      if (s1) s1.value = scores[0];
+      if (s2) s2.value = scores[1];
+      if (s3) s3.value = scores[2];
+      validateName(); validateNum('age','ageMsg'); validateNum('grade','gradeMsg');
+      validateScore('s1','m1'); validateScore('s2','m2'); validateScore('s3','m3');
+      const addBtn = document.getElementById('addUpdateBtn');
+      const cancelBtn = document.getElementById('cancelEditBtn');
+      if (addBtn) addBtn.textContent = getTranslation('update_student');
+      if (cancelBtn) cancelBtn.style.display = 'inline-block';
+    }
     window.startEdit = startEdit;
+
+    function cancelEdit() {
+      editingId = null;
+      ['name','age','grade','s1','s2','s3'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      ['nameMsg','ageMsg','gradeMsg','m1','m2','m3'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      const addBtn = document.getElementById('addUpdateBtn');
+      const cancelBtn = document.getElementById('cancelEditBtn');
+      if (addBtn) addBtn.textContent = getTranslation('add_student');
+      if (cancelBtn) cancelBtn.style.display = 'none';
+    }
     window.cancelEdit = cancelEdit;
+
+    async function addOrUpdateStudent() {
+      if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
+      
+      if (!validateName()) return showMessage(getTranslation('validation_name'), 'error');
+      if (!validateNum('age','ageMsg')) return showMessage(getTranslation('validation_number'), 'error');
+      if (!validateNum('grade','gradeMsg')) return showMessage(getTranslation('validation_number'), 'error');
+      const s1ok = validateScore('s1','m1');
+      const s2ok = validateScore('s2','m2');
+      const s3ok = validateScore('s3','m3');
+      if (!s1ok || !s2ok || !s3ok) return showMessage(getTranslation('validation_score'), 'error');
+
+      const name = document.getElementById('name')?.value.trim() || '';
+      const age = document.getElementById('age')?.value || '';
+      const grade = document.getElementById('grade')?.value || '';
+      const sex = document.getElementById('sex')?.value || 'M';
+      const scores = [
+        Number(document.getElementById('s1')?.value) || 0,
+        Number(document.getElementById('s2')?.value) || 0,
+        Number(document.getElementById('s3')?.value) || 0
+      ];
+      const studentData = { name, age, sex, grade, scores };
+
+      if (editingId) {
+        const index = cachedStudents.findIndex(s => s.id === editingId);
+        if (index !== -1) {
+          cachedStudents[index] = { ...cachedStudents[index], ...studentData };
+          renderStudents(cachedStudents);
+          updateStats(cachedStudents);
+        }
+        try {
+          await safeFirestoreCall(async () => {
+            const { updateDoc, doc } = getFirestoreModules();
+            await updateDoc(doc(window.db, 'students', editingId), studentData);
+          });
+          showMessage('✅ Student updated', 'success');
+        } catch(e) {
+          showMessage("Update failed. Reverting...", 'error');
+          if (isFirebaseReady()) {
+            const snap = await getFirestoreModules().getDocs(colRef('students'));
+            cachedStudents = []; snap.forEach(d => cachedStudents.push({ id: d.id, ...d.data() }));
+          }
+          renderStudents(cachedStudents);
+          updateStats(cachedStudents);
+        }
+        cancelEdit();
+      } else {
+        const tempId = generateId('temp');
+        studentData.createdAt = Date.now();
+        const newStudent = { ...studentData, id: tempId };
+        cachedStudents.push(newStudent);
+        renderStudents(cachedStudents);
+        updateStats(cachedStudents);
+        
+        ['name','age','grade','s1','s2','s3'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        ['nameMsg','ageMsg','gradeMsg','m1','m2','m3'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = '';
+        });
+        
+        try {
+          await safeFirestoreCall(async () => {
+            const { setDoc, doc } = getFirestoreModules();
+            const realId = generateId(name.replace(/\s+/g, '_') || 'student');
+            await setDoc(doc(window.db, 'students', realId), studentData);
+          });
+          showMessage('✅ Student added', 'success');
+        } catch(e) {
+          showMessage("Add failed. Removing temporary entry.", 'error');
+          cachedStudents = cachedStudents.filter(s => s.id !== tempId);
+          renderStudents(cachedStudents);
+          updateStats(cachedStudents);
+        }
+      }
+    }
+    window.addOrUpdateStudent = addOrUpdateStudent;
+
+    async function deleteStudent(id) {
+      if (!isTeacher) return;
+      const backup = [...cachedStudents];
+      cachedStudents = cachedStudents.filter(s => s.id !== id);
+      renderStudents(cachedStudents);
+      updateStats(cachedStudents);
+      try {
+        await safeFirestoreCall(async () => {
+          const { deleteDoc, doc } = getFirestoreModules();
+          await deleteDoc(doc(window.db, 'students', id));
+        });
+        showMessage('🗑️ Student deleted', 'success');
+      } catch(e) {
+        showMessage("Delete failed. Restoring.", 'error');
+        cachedStudents = backup;
+        renderStudents(cachedStudents);
+        updateStats(cachedStudents);
+      }
+      if (editingId === id) cancelEdit();
+    }
     window.deleteStudent = deleteStudent;
+
+    // ---------- OTHER COLLECTIONS ----------
+    async function addNote() {
+      if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
+      const noteInput = document.getElementById('note');
+      if (!noteInput) return;
+      const text = noteInput.value.trim();
+      if(!text) return;
+      try {
+        await safeFirestoreCall(async () => {
+          const { setDoc, doc } = getFirestoreModules();
+          await setDoc(doc(window.db, 'notes', generateId('note')), {text});
+        });
+        noteInput.value='';
+        showMessage('📝 Note added', 'success');
+      } catch(e) {}
+    }
     window.addNote = addNote;
+
+    async function addEvent() {
+      if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
+      const eventInput = document.getElementById('event');
+      const dateInput = document.getElementById('date');
+      if (!eventInput || !dateInput) return;
+      const name = eventInput.value.trim();
+      const date = dateInput.value;
+      if(!name || !date) { showMessage(getTranslation('event_required'), 'error'); return; }
+      try {
+        await safeFirestoreCall(async () => {
+          const { setDoc, doc } = getFirestoreModules();
+          await setDoc(doc(window.db, 'events', generateId('event')), {name, date});
+        });
+        eventInput.value=''; dateInput.value='';
+        showMessage('📅 Event added', 'success');
+      } catch(e) {}
+    }
     window.addEvent = addEvent;
+
+    async function addRes() {
+      if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
+      const resInput = document.getElementById('res');
+      if (!resInput) return;
+      const text = resInput.value.trim();
+      if(!text) return;
+      try {
+        await safeFirestoreCall(async () => {
+          const { setDoc, doc } = getFirestoreModules();
+          await setDoc(doc(window.db, 'resources', generateId('res')), {text});
+        });
+        resInput.value='';
+        showMessage('🔗 Resource added', 'success');
+      } catch(e) {}
+    }
     window.addRes = addRes;
+
+    async function send() {
+      const role = document.getElementById('role')?.value || 'Student';
+      const nameInput = document.getElementById('cname');
+      const msgInput = document.getElementById('msg');
+      if (!nameInput || !msgInput) return;
+      const name = nameInput.value.trim();
+      const msg = msgInput.value.trim();
+      if(!name || !msg) return;
+      try {
+        await safeFirestoreCall(async () => {
+          const { setDoc, doc } = getFirestoreModules();
+          await setDoc(doc(window.db, 'chats', generateId('chat')), {role, name, message: msg, time: new Date().toLocaleTimeString()});
+        });
+        msgInput.value = '';
+      } catch(e) {}
+    }
     window.send = send;
+
+    // ---------- IMPORT/EXPORT ----------
+    async function exportFile() {
+      try {
+        const data = {
+          students: cachedStudents,
+          notes: cachedNotes,
+          events: cachedEvents,
+          resources: cachedResources,
+          chats: cachedChats
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `teacher_hub_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showMessage(getTranslation('export_success'), 'success');
+      } catch(e) { showMessage("Export failed.", 'error'); }
+    }
+    window.exportFile = exportFile;
+
+    async function importFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!confirm('Import will replace current data. Continue?')) return;
+          if (!isFirebaseReady()) {
+            showMessage('Firebase unavailable. Cannot import.', 'error');
+            return;
+          }
+          const { writeBatch, doc } = getFirestoreModules();
+          const batch = writeBatch(window.db);
+          for (let s of data.students || []) {
+            const ref = doc(window.db, 'students', s.id || generateId('imported'));
+            const { id, ...rest } = s;
+            batch.set(ref, rest);
+          }
+          for (let n of data.notes || []) { const ref = doc(window.db, 'notes', n.id || generateId('note')); batch.set(ref, {text: n.text}); }
+          for (let ev of data.events || []) { const ref = doc(window.db, 'events', ev.id || generateId('event')); batch.set(ref, {name: ev.name, date: ev.date}); }
+          for (let r of data.resources || []) { const ref = doc(window.db, 'resources', r.id || generateId('res')); batch.set(ref, {text: r.text}); }
+          for (let c of data.chats || []) { const ref = doc(window.db, 'chats', c.id || generateId('chat')); batch.set(ref, {role: c.role, name: c.name, message: c.message, time: c.time}); }
+          await batch.commit();
+          showMessage(getTranslation('import_success'), 'success');
+          setTimeout(() => location.reload(), 1000);
+        } catch(err) { showMessage('Invalid backup file.', 'error'); }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+    window.importFile = importFile;
+
+    // ---------- UTILS ----------
+    function go(id) { 
+      document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
+      const target = document.getElementById(id);
+      if (target) target.classList.add('active'); 
+    }
+    window.go = go;
+    function setTheme(m) { 
+      if (!isTeacher) return showMessage("Teacher only.", 'error');
+      document.body.classList.toggle('light', m==='light'); 
+      localStorage.setItem('theme', m); 
+    }
+    window.setTheme = setTheme;
+    function fontSize(px) { 
+      if (!isTeacher) return showMessage("Teacher only.", 'error');
+      document.body.style.fontSize = px+'px'; 
+      localStorage.setItem('fontSize', px); 
+    }
+    window.fontSize = fontSize;
+    function toggleAutoSave() { 
+      if (!isTeacher) return showMessage("Teacher only.", 'error');
+      autoSave = !autoSave; 
+      const btn = document.getElementById('autoSaveBtn');
+      if (btn) btn.textContent = autoSave ? 'On' : 'Off'; 
+    }
+    window.toggleAutoSave = toggleAutoSave;
+    function notify() { alert('🔔 Demo notification'); }
+    window.notify = notify;
+    function clearAll() { 
+      if (!isTeacher) return;
+      if(confirm(getTranslation('clear_confirm'))) { 
+        localStorage.clear(); 
+        location.reload(); 
+      } 
+    }
+    window.clearAll = clearAll;
+    function saveAllData() { showMessage('Data is already synced to cloud.', 'info'); }
+    window.saveAllData = saveAllData;
+    function renderAll() { location.reload(); }
+    window.renderAll = renderAll;
+    function resetDefaults() { 
+      if (!isTeacher) return;
+      setTheme('dark'); fontSize(16); changeLanguage('en'); 
+      const langSelect = document.getElementById('languageSelect');
+      if (langSelect) langSelect.value='en'; 
+    }
+    window.resetDefaults = resetDefaults;
+
+    // ---------- LOGIN ----------
+    function loginAsTeacher() {
+      const pw = document.getElementById('teacherPassword');
+      if (pw && pw.value === TEACHER_PASSWORD) {
+        isTeacher = true;
+        document.body.classList.add('teacher-mode');
+        localStorage.setItem('isTeacher', 'true');
+        const langSelect = document.getElementById('languageSelect');
+        const importInput = document.getElementById('importFileInput');
+        if (langSelect) langSelect.disabled = false;
+        if (importInput) importInput.disabled = false;
+        go('home');
+        const msg = document.getElementById('loginMsg');
+        if (msg) msg.innerText = '';
+        showMessage(getTranslation('teacher_mode_on'), 'success');
+      } else {
+        const msg = document.getElementById('loginMsg');
+        if (msg) msg.innerText = getTranslation('invalid_password');
+      }
+    }
+    window.loginAsTeacher = loginAsTeacher;
+
+    function loginAsStudent() {
+      const emailInput = document.getElementById('studentEmail');
+      if (!emailInput) return;
+      const email = emailInput.value.trim();
+      if (!validateEmail(email)) {
+        const msg = document.getElementById('loginMsg');
+        if (msg) msg.innerText = getTranslation('invalid_email');
+        return;
+      }
+      isTeacher = false;
+      document.body.classList.remove('teacher-mode');
+      localStorage.setItem('isTeacher', 'false');
+      const langSelect = document.getElementById('languageSelect');
+      const importInput = document.getElementById('importFileInput');
+      if (langSelect) langSelect.disabled = true;
+      if (importInput) importInput.disabled = true;
+      go('home');
+      showMessage(getTranslation('student_mode_on'), 'info');
+    }
+    window.loginAsStudent = loginAsStudent;
+
+    // ---------- INIT SAMPLE DATA ----------
+    async function initializeCloudData() {
+      if (!isFirebaseReady()) return;
+      try {
+        const { getDocs, setDoc, doc } = getFirestoreModules();
+        const snap = await getDocs(colRef('students'));
+        if (snap.empty) {
+          await setDoc(doc(window.db, 'students', 'emma_watson'), { name:'Emma Watson', age:'14', sex:'F', grade:'9', scores:[88,92,79], createdAt:1 });
+          await setDoc(doc(window.db, 'students', 'liam_chen'), { name:'Liam Chen', age:'15', sex:'M', grade:'10', scores:[75,81,90], createdAt:2 });
+        }
+        const noteSnap = await getDocs(colRef('notes'));
+        if (noteSnap.empty) {
+          await setDoc(doc(window.db, 'notes', 'welcome'), {text:'Welcome to Teacher Hub!'});
+        }
+      } catch(e) { console.error('Sample data init error:', e); }
+    }
+
+    // ---------- LOAD ----------
+    window.addEventListener('load', () => {
+      // Apply saved preferences
+      const savedLang = localStorage.getItem('app_lang') || 'en';
+      const langSelect = document.getElementById('languageSelect');
+      if (langSelect) langSelect.value = savedLang;
+      applyLanguage(savedLang);
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      setTheme(savedTheme);
+      const savedFont = localStorage.getItem('fontSize');
+      if(savedFont) fontSize(parseInt(savedFont));
+
+      // Wait for Firebase ready
+      function onFirebaseReady(event) {
+        const success = event.detail?.success;
+        if (success) {
+          firestoreReady = true;
+          updateConnectionStatus(true);
+          setupRealtimeListeners();
+          initializeCloudData();
+        } else {
+          firestoreReady = false;
+          updateConnectionStatus(false, event.detail?.error || 'Initialization failed');
+          showMessage(getTranslation('firebase_failed'), 'error');
+          // Still render empty state
+          renderStudents([]);
+          renderNotes([]);
+          renderEvents([]);
+          renderResources([]);
+          renderChat([]);
+        }
+      }
+      
+      if (window.firestoreReady) {
+        onFirebaseReady({ detail: { success: true } });
+      } else {
+        window.addEventListener('firebase-ready', onFirebaseReady);
+      }
+
+      // Restore teacher session
+      const storedTeacher = localStorage.getItem('isTeacher');
+      if (storedTeacher !== null) {
+        isTeacher = storedTeacher === 'true';
+        if (isTeacher) {
+          document.body.classList.add('teacher-mode');
+          if (langSelect) langSelect.disabled = false;
+          const importInput = document.getElementById('importFileInput');
+          if (importInput) importInput.disabled = false;
+        } else {
+          if (langSelect) langSelect.disabled = true;
+          const importInput = document.getElementById('importFileInput');
+          if (importInput) importInput.disabled = true;
+        }
+        go('home');
+      } else {
+        go('login');
+      }
+
+      const import2 = document.getElementById('importFileInput2');
+      if (import2) import2.addEventListener('change', importFile);
+    });
+
+    setInterval(()=>{ if(autoSave && isTeacher) saveAllData(); }, 10000);
+
+    // Expose validation functions
     window.validateName = validateName;
     window.validateNum = validateNum;
     window.validateScore = validateScore;
-    window.go = go;
-    window.setTheme = setTheme;
-    window.fontSize = fontSize;
-    window.toggleAutoSave = toggleAutoSave;
-    window.notify = notify;
-    window.clearAll = clearAll;
-    window.saveAllData = saveAllData;
-    window.exportFile = exportFile;
-    window.importFile = importFile;
-    window.renderAll = renderAll;
-    window.resetDefaults = resetDefaults;
     window.changeLanguage = changeLanguage;
-    window.toggleLike = toggleLike;
-    window.showConnectionDetails = showConnectionDetails;
-  });
-  // FIX END
-  
-  // Translations
-  const translations = {
-    en: {
-      app_title: "📚 Teacher Hub",
-      login_title: "🔐 Welcome",
-      login_instruction: "👩‍🏫 Teacher: Enter password | 👀 Student: Enter email",
-      password_placeholder: "Password",
-      enter_teacher: "👩‍🏫 Enter as Teacher",
-      enter_student: "👀 View as Student",
-      dashboard: "📋 Dashboard",
-      students: "🧑‍🎓 Students",
-      analytics: "📊 Analytics",
-      notes: "📝 Notes",
-      calendar: "📅 Calendar",
-      resources: "🔗 Resources",
-      chat: "💬 Chat",
-      settings: "⚙️ Settings",
-      backup: "💽 Backup & Sync",
-      th_name: "Name", th_age: "Age", th_sex: "Sex", th_grade: "Grade", th_total: "Total", th_avg: "Avg", th_actions: "Actions",
-      add_student: "➕ Add Student", cancel: "❌ Cancel", update_student: "✏️ Update Student",
-      name_placeholder: "Name", age_placeholder: "Age", grade_placeholder: "Grade",
-      total_score: "Total Score", average_score: "Class Average",
-      note_placeholder: "Write a note...", add_note: "➕ Add Note",
-      event_placeholder: "Event name", add_event: "➕ Add Event",
-      resource_placeholder: "Paste link or text", add_resource: "➕ Add",
-      chat_name: "Your name", chat_message: "Message", send: "Send",
-      theme: "Theme", font_size: "Font Size", auto_save: "Auto Save", notify: "Notify", clear_data: "Clear Data",
-      export: "Export Backup", import: "Import Backup", language: "Language", reset: "Reset Defaults",
-      nav_home: "Home", nav_students: "Students", nav_analytics: "Stats", nav_notes: "Notes", nav_calendar: "Cal",
-      nav_resources: "Res", nav_chat: "Chat", nav_settings: "Set", nav_save: "Save",
-      invalid_password: "❌ Incorrect password",
-      invalid_email: "❌ Please enter a valid email address",
-      teacher_mode_on: "✅ Teacher mode activated",
-      student_mode_on: "👀 View-only mode",
-      fill_all_fields: "Please fill all fields correctly.",
-      event_required: "Both event name and date are required.",
-      import_success: "✅ Data imported successfully!",
-      export_success: "📤 Backup exported.",
-      clear_confirm: "Clear all data? This cannot be undone.",
-      validation_name: "✗ letters only",
-      validation_number: "✗ numbers only",
-      validation_score: "✗ 0-100 only",
-      no_students: "No students yet. Add one!",
-      no_notes: "No notes yet.",
-      firebase_failed: "Firebase connection failed. Using local mode.",
-      firebase_connected: "Firebase connected",
-      firebase_disconnected: "Firebase disconnected"
-    },
-    am: {
-      app_title: "📚 የመምህር ማዕከል",
-      login_title: "🔐 እንኳን ደህና መጡ",
-      login_instruction: "👩‍🏫 መምህር: የይለፍ ቃል ያስገቡ | 👀 ተማሪ: ኢሜይል ያስገቡ",
-      password_placeholder: "የይለፍ ቃል",
-      enter_teacher: "👩‍🏫 እንደ መምህር ግባ",
-      enter_student: "👀 እንደ ተማሪ ተመልከት",
-      dashboard: "📋 ዳሽቦርድ",
-      students: "🧑‍🎓 ተማሪዎች",
-      analytics: "📊 ትንታኔ",
-      notes: "📝 ማስታወሻዎች",
-      calendar: "📅 የቀን መቁጠሪያ",
-      resources: "🔗 መረጃዎች",
-      chat: "💬 ውይይት",
-      settings: "⚙️ ቅንብሮች",
-      backup: "💽 ምትኬ እና ማመሳሰል",
-      th_name: "ስም", th_age: "ዕድሜ", th_sex: "ፆታ", th_grade: "ክፍል", th_total: "ድምር", th_avg: "አማካይ", th_actions: "ተግባራት",
-      add_student: "➕ ተማሪ ጨምር", cancel: "❌ ሰርዝ", update_student: "✏️ ተማሪ አሻሽል",
-      name_placeholder: "ስም", age_placeholder: "ዕድሜ", grade_placeholder: "ክፍል",
-      total_score: "አጠቃላይ ውጤት", average_score: "የክፍል አማካይ",
-      note_placeholder: "ማስታወሻ ጻፍ...", add_note: "➕ አክል",
-      event_placeholder: "የክስተት ስም", add_event: "➕ ክስተት አክል",
-      resource_placeholder: "አገናኝ ወይም ጽሑፍ ለጥፍ", add_resource: "➕ አክል",
-      chat_name: "ስምዎ", chat_message: "መልእክት", send: "ላክ",
-      theme: "ገጽታ", font_size: "የቅርጸ-ቁምፊ መጠን", auto_save: "ራስ-ሰር አስቀምጥ", notify: "አሳውቅ", clear_data: "ውሂብ አጽዳ",
-      export: "ምትኬ ላክ", import: "ምትኬ አምጣ", language: "ቋንቋ", reset: "ወደ ነባሪ መልስ",
-      nav_home: "መነሻ", nav_students: "ተማሪዎች", nav_analytics: "ስታቲስቲክስ", nav_notes: "ማስታወሻ", nav_calendar: "ቀን መቁጠሪያ",
-      nav_resources: "መረጃ", nav_chat: "ውይይት", nav_settings: "ቅንብር", nav_save: "አስቀምጥ",
-      invalid_password: "❌ የተሳሳተ የይለፍ ቃል",
-      invalid_email: "❌ ትክክለኛ ኢሜይል ያስገቡ",
-      teacher_mode_on: "✅ የመምህር ሁነታ ነቅቷል",
-      student_mode_on: "👀 ተመልካች ብቻ",
-      fill_all_fields: "እባክዎ ሁሉንም መስኮች በትክክል ይሙሉ።",
-      event_required: "ሁለቱም የክስተት ስም እና ቀን ያስፈልጋሉ።",
-      import_success: "✅ ውሂብ በተሳካ ሁኔታ ገብቷል!",
-      export_success: "📤 ምትኬ ተልኳል።",
-      clear_confirm: "ሁሉንም ውሂብ ማጽዳት? ይህ ሊቀለበስ አይችልም።",
-      validation_name: "✗ ፊደላት ብቻ",
-      validation_number: "✗ ቁጥሮች ብቻ",
-      validation_score: "✗ 0-100 ብቻ",
-      no_students: "እስካሁን ምንም ተማሪዎች የሉም። አክል!",
-      no_notes: "እስካሁን ምንም ማስታወሻ የለም።",
-      firebase_failed: "የFirebase ግንኙነት አልተሳካም። አካባቢያዊ ሁነታን በመጠቀም ላይ።",
-      firebase_connected: "Firebase ተገናኝቷል",
-      firebase_disconnected: "Firebase ተቋርጧል"
-    }
-  };
-
-  let currentLang = 'en';
-  function applyLanguage(lang) {
-    currentLang = lang;
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const key = el.getAttribute('data-i18n');
-      if (translations[lang]?.[key]) el.textContent = translations[lang][key];
-    });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-      const key = el.getAttribute('data-i18n-placeholder');
-      if (translations[lang]?.[key]) el.placeholder = translations[lang][key];
-    });
-    if (cachedStudents.length) renderStudents(cachedStudents);
-    updateStats(cachedStudents);
-    if (cachedNotes.length) renderNotes(cachedNotes);
-  }
-  function changeLanguage(lang) {
-    if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
-    applyLanguage(lang);
-    localStorage.setItem('app_lang', lang);
-  }
-  function getTranslation(key) {
-    return translations[currentLang]?.[key] || key;
-  }
-
-  // ========== GLOBALS ==========
-  const TEACHER_PASSWORD = "teacher123";
-  let isTeacher = false;
-  let autoSave = false;
-  let cachedStudents = [], cachedNotes = [], cachedEvents = [], cachedResources = [], cachedChats = [];
-  let editingId = null;
-  let firestoreReady = false, firebaseConnected = false;
-  let viewCount = 0, likeCount = 0, userLiked = false;
-
-  const STORAGE_KEYS = {
-    students: 'teacher_hub_students',
-    notes: 'teacher_hub_notes',
-    events: 'teacher_hub_events',
-    resources: 'teacher_hub_resources',
-    chats: 'teacher_hub_chats',
-    views: 'teacher_hub_views',
-    likes: 'teacher_hub_likes',
-    liked: 'teacher_hub_user_liked'
-  };
-
-  function loadFromLocalStorage() {
-    try {
-      cachedStudents = JSON.parse(localStorage.getItem(STORAGE_KEYS.students) || '[]');
-      cachedNotes = JSON.parse(localStorage.getItem(STORAGE_KEYS.notes) || '[]');
-      cachedEvents = JSON.parse(localStorage.getItem(STORAGE_KEYS.events) || '[]');
-      cachedResources = JSON.parse(localStorage.getItem(STORAGE_KEYS.resources) || '[]');
-      cachedChats = JSON.parse(localStorage.getItem(STORAGE_KEYS.chats) || '[]');
-      viewCount = parseInt(localStorage.getItem(STORAGE_KEYS.views) || '0') + 1;
-      likeCount = parseInt(localStorage.getItem(STORAGE_KEYS.likes) || '0');
-      userLiked = localStorage.getItem(STORAGE_KEYS.liked) === 'true';
-      localStorage.setItem(STORAGE_KEYS.views, viewCount);
-      updateViewLikeUI();
-    } catch(e) { console.warn(e); }
-  }
-
-  function saveToLocalStorage() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.students, JSON.stringify(cachedStudents));
-      localStorage.setItem(STORAGE_KEYS.notes, JSON.stringify(cachedNotes));
-      localStorage.setItem(STORAGE_KEYS.events, JSON.stringify(cachedEvents));
-      localStorage.setItem(STORAGE_KEYS.resources, JSON.stringify(cachedResources));
-      localStorage.setItem(STORAGE_KEYS.chats, JSON.stringify(cachedChats));
-      localStorage.setItem(STORAGE_KEYS.likes, likeCount);
-      localStorage.setItem(STORAGE_KEYS.liked, userLiked);
-    } catch(e) {}
-  }
-
-  function updateViewLikeUI() {
-    document.getElementById('viewCount').innerText = viewCount;
-    document.getElementById('likeCount').innerText = likeCount;
-    const btn = document.getElementById('likeButton');
-    btn.className = 'like-btn' + (userLiked ? ' liked' : '');
-  }
-
-  function toggleLike() {
-    if (!userLiked) { likeCount++; userLiked = true; }
-    else { likeCount = Math.max(0, likeCount-1); userLiked = false; }
-    saveToLocalStorage();
-    updateViewLikeUI();
-  }
-
-  function getFirestoreModules() { return window.firestoreModules || null; }
-  function colRef(name) {
-    if (!window.db) throw new Error('Firestore not initialized');
-    const modules = getFirestoreModules();
-    if (!modules) throw new Error('Firestore modules not loaded');
-    return modules.collection(window.db, name);
-  }
-
-  function updateConnectionStatus(connected, msg = '') {
-    if (typeof window.updateConnectionStatus === 'function') window.updateConnectionStatus(connected, msg);
-  }
-
-  function showConnectionDetails() {
-    if (firebaseConnected) showMessage('✅ Firebase connected.', 'success');
-    else if (window.firestoreReady === false && window.db === null) showMessage('🟡 Offline Mode: Data saved locally.', 'info');
-    else showMessage('❌ Firebase failed.', 'error');
-  }
-  window.showConnectionDetails = showConnectionDetails;
-
-  function showMessage(msg, type = 'info') {
-    const banner = document.getElementById('globalMessage');
-    banner.textContent = msg;
-    banner.style.display = 'block';
-    banner.style.background = type === 'error' ? '#ff4d4d' : (type === 'success' ? '#2e8b57' : '#3a6ea5');
-    setTimeout(() => banner.style.display = 'none', 5000);
-  }
-
-  function setupRealtimeListeners() {
-    if (!window.db || !getFirestoreModules()) {
-      loadFromLocalStorage();
-      renderAllFromCache();
-      return;
-    }
-    const { onSnapshot } = getFirestoreModules();
-    try {
-      onSnapshot(colRef('students'), (snap) => {
-        const students = []; snap.forEach(d => students.push({ id: d.id, ...d.data() }));
-        cachedStudents = students; saveToLocalStorage(); renderStudents(students); updateStats(students); updateConnectionStatus(true);
-      }, (err) => { console.error(err); loadFromLocalStorage(); renderAllFromCache(); });
-      onSnapshot(colRef('notes'), (snap) => { const notes = []; snap.forEach(d => notes.push({ id: d.id, text: d.data().text })); cachedNotes = notes; saveToLocalStorage(); renderNotes(notes); renderHomeNotesPreview(notes); });
-      onSnapshot(colRef('events'), (snap) => { const events = []; snap.forEach(d => events.push({ id: d.id, ...d.data() })); cachedEvents = events; saveToLocalStorage(); renderEvents(events); });
-      onSnapshot(colRef('resources'), (snap) => { const res = []; snap.forEach(d => res.push({ id: d.id, text: d.data().text })); cachedResources = res; saveToLocalStorage(); renderResources(res); });
-      onSnapshot(colRef('chats'), (snap) => { const chats = []; snap.forEach(d => chats.push({ id: d.id, ...d.data() })); cachedChats = chats; saveToLocalStorage(); renderChat(chats); });
-    } catch(e) { loadFromLocalStorage(); renderAllFromCache(); }
-  }
-
-  function renderAllFromCache() {
-    renderStudents(cachedStudents); updateStats(cachedStudents);
-    renderNotes(cachedNotes); renderHomeNotesPreview(cachedNotes);
-    renderEvents(cachedEvents); renderResources(cachedResources); renderChat(cachedChats);
-  }
-
-  function renderStudents(students) {
-    const tbody = document.getElementById('tableBody'); if (!tbody) return; tbody.innerHTML = '';
-    if (!students.length) { const row = tbody.insertRow(); const cell = row.insertCell(0); cell.colSpan = isTeacher ? 11 : 10; cell.textContent = getTranslation('no_students'); cell.style.textAlign = 'center'; return; }
-    students.sort((a,b) => (a.createdAt||0) - (b.createdAt||0)).forEach((s,i) => {
-      const scores = s.scores || [0,0,0]; const sum = scores.reduce((a,b)=>a+(+b||0),0); const avg = (sum/3).toFixed(1);
-      const row = tbody.insertRow();
-      row.insertCell(0).textContent = i+1; row.insertCell(1).textContent = s.name||''; row.insertCell(2).textContent = s.age||'';
-      row.insertCell(3).textContent = s.sex||''; row.insertCell(4).textContent = s.grade||'';
-      row.insertCell(5).textContent = scores[0]; row.insertCell(6).textContent = scores[1]; row.insertCell(7).textContent = scores[2];
-      row.insertCell(8).textContent = sum; row.insertCell(9).textContent = avg;
-      if (isTeacher) { const actions = row.insertCell(10); actions.innerHTML = `<button onclick="window.startEdit('${s.id}')">✏️</button><button onclick="window.deleteStudent('${s.id}')">❌</button>`; }
-    });
-  }
-
-  function renderNotes(notes) { const list = document.getElementById('notesList'); list.innerHTML = notes.length ? notes.map(n => `<li>📝 ${n.text}</li>`).join('') : `<li>${getTranslation('no_notes')}</li>`; }
-  function renderHomeNotesPreview(notes) { const preview = document.getElementById('homeNotesPreview'); const latest = notes.slice(-3).reverse(); preview.innerHTML = latest.length ? latest.map(n => `<li>📝 ${n.text}</li>`).join('') : `<li>${getTranslation('no_notes')}</li>`; }
-  function renderEvents(events) { const list = document.getElementById('events'); events.sort((a,b)=> (a.date||'').localeCompare(b.date||'')); list.innerHTML = events.length ? events.map(e => `<li><strong>${e.date}</strong> : ${e.name}</li>`).join('') : '<li>—</li>'; }
-  function renderResources(res) { const list = document.getElementById('resList'); list.innerHTML = res.length ? res.map(r => `<li>🔗 ${r.text}</li>`).join('') : '<li>—</li>'; }
-  function renderChat(chats) { const box = document.getElementById('chatBox'); box.innerHTML = chats.length ? chats.map(c => `<li><strong>[${c.role}] ${c.name}:</strong> ${c.message}</li>`).join('') : '<li>—</li>'; }
-
-  function updateStats(students) {
-    let sum=0, cnt=0; students.forEach(s=> (s.scores||[]).forEach(v=>{ sum+=+v; cnt++; }));
-    document.getElementById('total').innerText = sum; document.getElementById('avg').innerText = cnt?(sum/cnt).toFixed(1):'0';
-    document.getElementById('homeStatStudents').innerText = students.length; document.getElementById('homeStatAvg').innerText = cnt?(sum/cnt).toFixed(1):'0';
-  }
-
-  function validateScore(id, msgId) { const val = document.getElementById(id).value; const num = Number(val); const ok = /^\d+$/.test(val) && num >= 0 && num <= 100; document.getElementById(msgId).innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_score')}</span>`; return ok; }
-  function validateNum(id, msgId) { const val = document.getElementById(id).value; const ok = /^\d+$/.test(val) && val !== ''; document.getElementById(msgId).innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_number')}</span>`; return ok; }
-  function validateName() { const ok = /^[A-Za-z ]+$/.test(document.getElementById('name').value); document.getElementById('nameMsg').innerHTML = ok ? '<span class="valid">✓</span>' : `<span class="invalid">${getTranslation('validation_name')}</span>`; return ok; }
-  function validateEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
-
-  async function safeFirestoreCall(operation, collectionName, fallbackLocalUpdate) {
-    if (window.db && getFirestoreModules()) { try { await operation(); return true; } catch (error) { console.error(error); showMessage(`Cloud sync failed. Saved locally.`, 'error'); } }
-    if (fallbackLocalUpdate) fallbackLocalUpdate();
-    saveToLocalStorage(); renderAllFromCache(); return false;
-  }
-
-  function startEdit(id) { if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error'); const student = cachedStudents.find(s => s.id === id); if (!student) return; editingId = id; document.getElementById('name').value = student.name||''; document.getElementById('age').value = student.age||''; document.getElementById('sex').value = student.sex||'M'; document.getElementById('grade').value = student.grade||''; const scores = student.scores||[0,0,0]; document.getElementById('s1').value = scores[0]; document.getElementById('s2').value = scores[1]; document.getElementById('s3').value = scores[2]; validateName(); validateNum('age','ageMsg'); validateNum('grade','gradeMsg'); validateScore('s1','m1'); validateScore('s2','m2'); validateScore('s3','m3'); document.getElementById('addUpdateBtn').textContent = getTranslation('update_student'); document.getElementById('cancelEditBtn').style.display = 'inline-block'; }
-  function cancelEdit() { editingId = null; ['name','age','grade','s1','s2','s3'].forEach(id => document.getElementById(id).value = ''); ['nameMsg','ageMsg','gradeMsg','m1','m2','m3'].forEach(id => document.getElementById(id).innerHTML = ''); document.getElementById('addUpdateBtn').textContent = getTranslation('add_student'); document.getElementById('cancelEditBtn').style.display = 'none'; }
-
-  async function addOrUpdateStudent() {
-    if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error');
-    if (!validateName() || !validateNum('age','ageMsg') || !validateNum('grade','gradeMsg') || !validateScore('s1','m1') || !validateScore('s2','m2') || !validateScore('s3','m3')) return;
-    const name = document.getElementById('name').value.trim(), age = document.getElementById('age').value, grade = document.getElementById('grade').value, sex = document.getElementById('sex').value;
-    const scores = [Number(document.getElementById('s1').value)||0, Number(document.getElementById('s2').value)||0, Number(document.getElementById('s3').value)||0];
-    const studentData = { name, age, sex, grade, scores };
-    if (editingId) {
-      const index = cachedStudents.findIndex(s => s.id === editingId); if (index !== -1) { cachedStudents[index] = { ...cachedStudents[index], ...studentData }; renderStudents(cachedStudents); updateStats(cachedStudents); }
-      await safeFirestoreCall(async () => { const { updateDoc, doc } = getFirestoreModules(); await updateDoc(doc(window.db, 'students', editingId), studentData); }, 'students', () => { const idx = cachedStudents.findIndex(s => s.id === editingId); if (idx !== -1) Object.assign(cachedStudents[idx], studentData); });
-      cancelEdit();
-    } else {
-      const tempId = 'local_' + Date.now(); studentData.createdAt = Date.now(); cachedStudents.push({ ...studentData, id: tempId }); renderStudents(cachedStudents); updateStats(cachedStudents);
-      ['name','age','grade','s1','s2','s3'].forEach(id => document.getElementById(id).value = ''); ['nameMsg','ageMsg','gradeMsg','m1','m2','m3'].forEach(id => document.getElementById(id).innerHTML = '');
-      await safeFirestoreCall(async () => { const { setDoc, doc } = getFirestoreModules(); const realId = name.replace(/\s+/g, '_') + '-' + Date.now(); await setDoc(doc(window.db, 'students', realId), studentData); }, 'students');
-    }
-  }
-
-  async function deleteStudent(id) { if (!isTeacher) return; cachedStudents = cachedStudents.filter(s => s.id !== id); renderStudents(cachedStudents); updateStats(cachedStudents); await safeFirestoreCall(async () => { const { deleteDoc, doc } = getFirestoreModules(); await deleteDoc(doc(window.db, 'students', id)); }, 'students', () => { cachedStudents = cachedStudents.filter(s => s.id !== id); }); if (editingId === id) cancelEdit(); }
-
-  async function addNote() { if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error'); const text = document.getElementById('note').value.trim(); if(!text) return; const newNote = { id: 'local_note_'+Date.now(), text }; cachedNotes.push(newNote); renderNotes(cachedNotes); renderHomeNotesPreview(cachedNotes); document.getElementById('note').value=''; await safeFirestoreCall(async () => { const { setDoc, doc } = getFirestoreModules(); await setDoc(doc(window.db, 'notes', Date.now().toString()), {text}); }, 'notes'); }
-  async function addEvent() { if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error'); const name = document.getElementById('event').value.trim(), date = document.getElementById('date').value; if(!name || !date) { showMessage(getTranslation('event_required'), 'error'); return; } const newEvent = { id: 'local_event_'+Date.now(), name, date }; cachedEvents.push(newEvent); renderEvents(cachedEvents); document.getElementById('event').value=''; document.getElementById('date').value=''; await safeFirestoreCall(async () => { const { setDoc, doc } = getFirestoreModules(); await setDoc(doc(window.db, 'events', Date.now().toString()), {name, date}); }, 'events'); }
-  async function addRes() { if (!isTeacher) return showMessage(getTranslation('student_mode_on'), 'error'); const text = document.getElementById('res').value.trim(); if(!text) return; const newRes = { id: 'local_res_'+Date.now(), text }; cachedResources.push(newRes); renderResources(cachedResources); document.getElementById('res').value=''; await safeFirestoreCall(async () => { const { setDoc, doc } = getFirestoreModules(); await setDoc(doc(window.db, 'resources', Date.now().toString()), {text}); }, 'resources'); }
-  async function send() { const role = document.getElementById('role').value, name = document.getElementById('cname').value.trim(), msg = document.getElementById('msg').value.trim(); if(!name || !msg) return; const newChat = { id: 'local_chat_'+Date.now(), role, name, message: msg, time: new Date().toLocaleTimeString() }; cachedChats.push(newChat); renderChat(cachedChats); document.getElementById('msg').value = ''; await safeFirestoreCall(async () => { const { setDoc, doc } = getFirestoreModules(); await setDoc(doc(window.db, 'chats', Date.now().toString()), {role, name, message: msg, time: new Date().toLocaleTimeString()}); }, 'chats'); }
-
-  async function exportFile() { try { const data = { students: cachedStudents, notes: cachedNotes, events: cachedEvents, resources: cachedResources, chats: cachedChats }; const blob = new Blob([JSON.stringify(data)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `teacher_hub_backup.json`; a.click(); } catch(e) {} }
-  async function importFile(event) { const file = event.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); if(!confirm('Replace data?')) return; cachedStudents = data.students||[]; cachedNotes = data.notes||[]; cachedEvents = data.events||[]; cachedResources = data.resources||[]; cachedChats = data.chats||[]; saveToLocalStorage(); renderAllFromCache(); if(window.db && getFirestoreModules()) { const { writeBatch, doc } = getFirestoreModules(); const batch = writeBatch(window.db); for(let s of cachedStudents) { const { id, ...rest } = s; batch.set(doc(window.db, 'students', id), rest); } await batch.commit(); } } catch(err) { alert('Invalid file'); } }; reader.readAsText(file); event.target.value = ''; }
-
-  function go(id) { document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-  function setTheme(m) { if (!isTeacher) return; document.body.classList.toggle('light', m==='light'); localStorage.setItem('theme', m); }
-  function fontSize(px) { if (!isTeacher) return; document.body.style.fontSize = px+'px'; localStorage.setItem('fontSize', px); }
-  function toggleAutoSave() { if (!isTeacher) return; autoSave = !autoSave; document.getElementById('autoSaveBtn').textContent = autoSave ? 'On' : 'Off'; }
-  function notify() { alert('🔔 Demo notification'); }
-  function clearAll() { if (!isTeacher) return; if(confirm(getTranslation('clear_confirm'))) { localStorage.clear(); location.reload(); } }
-  function saveAllData() { saveToLocalStorage(); showMessage('Data saved locally.', 'info'); }
-  function renderAll() { location.reload(); }
-  function resetDefaults() { if (!isTeacher) return; setTheme('dark'); fontSize(16); changeLanguage('en'); }
-
-  function loginAsTeacher() {
-    if (document.getElementById('teacherPassword').value === TEACHER_PASSWORD) {
-      isTeacher = true; window.isTeacher = true;
-      document.body.classList.add('teacher-mode', 'logged-in');
-      localStorage.setItem('isTeacher', 'true');
-      document.getElementById('languageSelect').disabled = false;
-      document.getElementById('importFileInput').disabled = false;
-      document.getElementById('bottomNav').classList.remove('hidden');
-      go('home');
-      showMessage(getTranslation('teacher_mode_on'), 'success');
-    } else {
-      document.getElementById('loginMsg').innerText = getTranslation('invalid_password');
-    }
-  }
-  function loginAsStudent() {
-    const email = document.getElementById('studentEmail').value.trim();
-    if (!validateEmail(email)) {
-      document.getElementById('loginMsg').innerText = getTranslation('invalid_email');
-      return;
-    }
-    isTeacher = false; window.isTeacher = false;
-    document.body.classList.remove('teacher-mode');
-    document.body.classList.add('logged-in');
-    localStorage.setItem('isTeacher', 'false');
-    document.getElementById('languageSelect').disabled = true;
-    document.getElementById('importFileInput').disabled = true;
-    document.getElementById('bottomNav').classList.remove('hidden');
-    go('home');
-    showMessage(getTranslation('student_mode_on'), 'info');
-  }
-
-  async function initializeCloudData() {
-    if (!window.db || !getFirestoreModules()) {
-      if (cachedStudents.length === 0) {
-        cachedStudents.push({ id: 'sample_emma', name:'Emma Watson', age:'14', sex:'F', grade:'9', scores:[88,92,79], createdAt:1 });
-        cachedStudents.push({ id: 'sample_liam', name:'Liam Chen', age:'15', sex:'M', grade:'10', scores:[75,81,90], createdAt:2 });
-        cachedNotes.push({ id: 'sample_note', text:'Welcome to Teacher Hub!' });
-        saveToLocalStorage(); renderAllFromCache();
-      }
-      return;
-    }
-    try {
-      const { getDocs, setDoc, doc } = getFirestoreModules();
-      if ((await getDocs(colRef('students'))).empty) {
-        await setDoc(doc(window.db, 'students', 'emma_watson'), { name:'Emma Watson', age:'14', sex:'F', grade:'9', scores:[88,92,79], createdAt:1 });
-        await setDoc(doc(window.db, 'students', 'liam_chen'), { name:'Liam Chen', age:'15', sex:'M', grade:'10', scores:[75,81,90], createdAt:2 });
-      }
-      if ((await getDocs(colRef('notes'))).empty) await setDoc(doc(window.db, 'notes', 'welcome'), {text:'Welcome to Teacher Hub!'});
-    } catch(e) {}
-  }
-
-  // FIX START: Expose functions immediately (also in DOMContentLoaded for redundancy)
-  window.loginAsTeacher = loginAsTeacher;
-  window.loginAsStudent = loginAsStudent;
-  window.addOrUpdateStudent = addOrUpdateStudent;
-  window.startEdit = startEdit;
-  window.cancelEdit = cancelEdit;
-  window.deleteStudent = deleteStudent;
-  window.addNote = addNote;
-  window.addEvent = addEvent;
-  window.addRes = addRes;
-  window.send = send;
-  window.validateName = validateName;
-  window.validateNum = validateNum;
-  window.validateScore = validateScore;
-  window.go = go;
-  window.setTheme = setTheme;
-  window.fontSize = fontSize;
-  window.toggleAutoSave = toggleAutoSave;
-  window.notify = notify;
-  window.clearAll = clearAll;
-  window.saveAllData = saveAllData;
-  window.exportFile = exportFile;
-  window.importFile = importFile;
-  window.renderAll = renderAll;
-  window.resetDefaults = resetDefaults;
-  window.changeLanguage = changeLanguage;
-  window.toggleLike = toggleLike;
-  window.showConnectionDetails = showConnectionDetails;
-  window.isTeacher = isTeacher;
-  // FIX END
-
-  window.addEventListener('load', () => {
-    const savedLang = localStorage.getItem('app_lang')||'en';
-    document.getElementById('languageSelect').value = savedLang;
-    applyLanguage(savedLang);
-    setTheme(localStorage.getItem('theme')||'dark');
-    const savedFont = localStorage.getItem('fontSize');
-    if(savedFont) fontSize(parseInt(savedFont));
-    
-    function onFirebaseReady(event) {
-      if (event.detail?.success) {
-        firestoreReady=true; firebaseConnected=true;
-        updateConnectionStatus(true);
-        setupRealtimeListeners();
-        initializeCloudData();
-      } else {
-        firestoreReady=false; firebaseConnected=false;
-        updateConnectionStatus(event.detail?.offline ? 'offline' : false);
-        loadFromLocalStorage();
-        renderAllFromCache();
-        showMessage(getTranslation('firebase_failed'), 'error');
-      }
-    }
-    if (window.firestoreReady !== undefined) {
-      if (window.firestoreReady) {
-        firestoreReady=true; firebaseConnected=true;
-        setupRealtimeListeners();
-        initializeCloudData();
-      } else {
-        loadFromLocalStorage();
-        renderAllFromCache();
-      }
-    } else {
-      window.addEventListener('firebase-ready', onFirebaseReady);
-    }
-    
-    const storedTeacher = localStorage.getItem('isTeacher');
-    if (storedTeacher !== null) {
-      isTeacher = storedTeacher === 'true';
-      window.isTeacher = isTeacher;
-      if (isTeacher) {
-        document.body.classList.add('teacher-mode', 'logged-in');
-        document.getElementById('languageSelect').disabled = false;
-        document.getElementById('importFileInput').disabled = false;
-      } else {
-        document.body.classList.add('logged-in');
-        document.getElementById('languageSelect').disabled = true;
-        document.getElementById('importFileInput').disabled = true;
-      }
-      document.getElementById('bottomNav').classList.remove('hidden');
-      go('home');
-    } else {
-      go('login');
-      document.getElementById('bottomNav').classList.add('hidden');
-    }
-    document.getElementById('importFileInput2').addEventListener('change', importFile);
-  });
-
-  setInterval(()=>{ if(autoSave && isTeacher) saveAllData(); }, 10000);
+  })();
 </script>
 </body>
 </html>
